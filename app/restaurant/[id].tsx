@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker } from 'react-native-maps';
 import { Colors } from '../../src/constants/colors';
 import { supabase } from '../../src/lib/supabase';
 import { Restaurant } from '../../src/types/database';
+import DetailMapSection from '../../src/components/DetailMapSection';
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -96,7 +96,7 @@ export default function RestaurantDetailScreen() {
   }
 
   function renderPriceRange(range: number) {
-    return '€'.repeat(range);
+    return '$'.repeat(range);
   }
 
   if (loading) {
@@ -110,6 +110,7 @@ export default function RestaurantDetailScreen() {
   if (!restaurant) {
     return (
       <View style={styles.centered}>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.light.textSecondary} />
         <Text style={styles.errorText}>Restaurant non trouvé</Text>
       </View>
     );
@@ -117,44 +118,29 @@ export default function RestaurantDetailScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.mapContainer}>
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: restaurant.latitude,
-            longitude: restaurant.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          scrollEnabled={false}
-          zoomEnabled={false}
-        >
-          <Marker
-            coordinate={{
-              latitude: restaurant.latitude,
-              longitude: restaurant.longitude,
-            }}
-          />
-        </MapView>
-      </View>
+      <DetailMapSection restaurant={restaurant} />
 
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{restaurant.name}</Text>
-            <TouchableOpacity onPress={toggleFavorite}>
+            <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
               <Ionicons
                 name={isFavorite ? 'heart' : 'heart-outline'}
-                size={28}
+                size={26}
                 color={isFavorite ? Colors.light.error : Colors.light.textSecondary}
               />
             </TouchableOpacity>
           </View>
 
           <View style={styles.metaContainer}>
-            <Text style={styles.cuisine}>
-              {restaurant.cuisine_type?.join(' • ')}
-            </Text>
+            <View style={styles.cuisineTags}>
+              {restaurant.cuisine_type?.map((type) => (
+                <View key={type} style={styles.cuisineTag}>
+                  <Text style={styles.cuisineTagText}>{type}</Text>
+                </View>
+              ))}
+            </View>
             <View style={styles.metaRow}>
               <Text style={styles.price}>
                 {renderPriceRange(restaurant.price_range)}
@@ -180,34 +166,22 @@ export default function RestaurantDetailScreen() {
           <Text style={styles.sectionTitle}>Informations</Text>
           <View style={styles.infoCard}>
             <TouchableOpacity style={styles.infoRow} onPress={openMaps}>
-              <Ionicons
-                name="location-outline"
-                size={20}
-                color={Colors.light.primary}
-              />
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="location-outline" size={18} color={Colors.light.primary} />
+              </View>
               <Text style={styles.infoText}>{restaurant.address}</Text>
-              <Ionicons
-                name="navigate-outline"
-                size={20}
-                color={Colors.light.primary}
-              />
+              <Ionicons name="navigate-outline" size={18} color={Colors.light.primary} />
             </TouchableOpacity>
 
             {restaurant.phone && (
               <>
                 <View style={styles.separator} />
                 <TouchableOpacity style={styles.infoRow} onPress={callRestaurant}>
-                  <Ionicons
-                    name="call-outline"
-                    size={20}
-                    color={Colors.light.primary}
-                  />
+                  <View style={styles.infoIconContainer}>
+                    <Ionicons name="call-outline" size={18} color={Colors.light.primary} />
+                  </View>
                   <Text style={styles.infoText}>{restaurant.phone}</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={Colors.light.textSecondary}
-                  />
+                  <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
                 </TouchableOpacity>
               </>
             )}
@@ -216,19 +190,13 @@ export default function RestaurantDetailScreen() {
               <>
                 <View style={styles.separator} />
                 <TouchableOpacity style={styles.infoRow} onPress={openWebsite}>
-                  <Ionicons
-                    name="globe-outline"
-                    size={20}
-                    color={Colors.light.primary}
-                  />
+                  <View style={styles.infoIconContainer}>
+                    <Ionicons name="globe-outline" size={18} color={Colors.light.primary} />
+                  </View>
                   <Text style={styles.infoText} numberOfLines={1}>
                     {restaurant.website}
                   </Text>
-                  <Ionicons
-                    name="open-outline"
-                    size={20}
-                    color={Colors.light.textSecondary}
-                  />
+                  <Ionicons name="open-outline" size={18} color={Colors.light.textSecondary} />
                 </TouchableOpacity>
               </>
             )}
@@ -254,16 +222,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.light.background,
+    gap: 12,
   },
   errorText: {
     fontSize: 16,
     color: Colors.light.textSecondary,
-  },
-  mapContainer: {
-    height: 200,
-  },
-  map: {
-    flex: 1,
   },
   content: {
     padding: 16,
@@ -277,19 +240,34 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: Colors.light.text,
     flex: 1,
-    marginRight: 16,
+    marginRight: 12,
+  },
+  favoriteButton: {
+    padding: 4,
   },
   metaContainer: {
-    marginTop: 8,
+    marginTop: 10,
+    gap: 10,
   },
-  cuisine: {
-    fontSize: 16,
-    color: Colors.light.textSecondary,
-    marginBottom: 8,
+  cuisineTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  cuisineTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: Colors.light.primaryLight,
+  },
+  cuisineTagText: {
+    fontSize: 13,
+    color: Colors.light.primary,
+    fontWeight: '500',
   },
   metaRow: {
     flexDirection: 'row',
@@ -326,7 +304,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   infoCard: {
-    backgroundColor: Colors.light.surface,
+    backgroundColor: Colors.light.surfaceElevated,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.light.border,
@@ -334,8 +312,16 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     gap: 12,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.light.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   infoText: {
     flex: 1,
@@ -345,7 +331,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: Colors.light.border,
-    marginLeft: 48,
+    marginLeft: 58,
   },
   directionsButton: {
     flexDirection: 'row',
