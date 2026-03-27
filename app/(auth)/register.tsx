@@ -70,22 +70,24 @@ export default function RegisterScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Branding */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="person-add" size={28} color="#FFFFFF" />
+          <View style={styles.logoWrap}>
+            <Ionicons name="person-add" size={26} color={Colors.light.textOnPrimary} />
           </View>
           <Text style={styles.title}>Créer un compte</Text>
           <Text style={styles.subtitle}>
-            Rejoignez la communauté GeoResto
+            Rejoignez la communauté Tastly
           </Text>
         </View>
 
+        {/* Form card */}
         <View style={styles.card}>
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Ionicons
                 name="person-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -101,7 +103,7 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="mail-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -119,7 +121,7 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="lock-closed-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -137,7 +139,7 @@ export default function RegisterScreen() {
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
+                  size={18}
                   color={Colors.light.textSecondary}
                 />
               </TouchableOpacity>
@@ -146,7 +148,7 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="shield-checkmark-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -164,19 +166,19 @@ export default function RegisterScreen() {
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleRegister}
               disabled={loading}
+              activeOpacity={0.85}
             >
-              {loading ? (
-                <Text style={styles.buttonText}>Inscription...</Text>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>S'inscrire</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                </View>
+              <Text style={styles.buttonText}>
+                {loading ? 'Inscription...' : "S'inscrire"}
+              </Text>
+              {!loading && (
+                <Ionicons name="arrow-forward" size={17} color={Colors.light.textOnPrimary} />
               )}
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Déjà un compte ? </Text>
           <Link href="/(auth)/login" asChild>
@@ -204,19 +206,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  logoContainer: {
+  logoWrap: {
     width: 64,
     height: 64,
-    borderRadius: 16,
-    backgroundColor: Colors.light.secondary,
+    borderRadius: 20,
+    backgroundColor: Colors.light.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: Colors.light.text,
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
@@ -225,19 +228,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: Colors.light.surfaceElevated,
-    borderRadius: 16,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    ...(Platform.OS === 'web'
-      ? {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.06,
-          shadowRadius: 16,
-        }
-      : {}),
+    borderColor: Colors.light.borderLight,
   },
   form: {
     gap: 14,
@@ -245,10 +240,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: Colors.light.borderLight,
     paddingHorizontal: 14,
   },
   inputIcon: {
@@ -264,37 +259,36 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: Colors.light.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 6,
   },
   buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: Colors.light.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 28,
   },
   footerText: {
     color: Colors.light.textSecondary,
     fontSize: 14,
   },
   footerLink: {
-    color: Colors.light.primary,
+    color: Colors.light.accent,
     fontSize: 14,
     fontWeight: '600',
   },

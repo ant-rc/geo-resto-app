@@ -48,16 +48,18 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Branding */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="restaurant" size={32} color="#FFFFFF" />
+          <View style={styles.logoWrap}>
+            <Ionicons name="compass" size={30} color={Colors.light.textOnPrimary} />
           </View>
-          <Text style={styles.title}>GeoResto</Text>
+          <Text style={styles.title}>Tastly</Text>
           <Text style={styles.subtitle}>
-            Trouvez les meilleurs restaurants autour de vous
+            Find your perfect bite{'\n'}Trouvez LE bon restaurant
           </Text>
         </View>
 
+        {/* Form card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Connexion</Text>
 
@@ -65,7 +67,7 @@ export default function LoginScreen() {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="mail-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -83,7 +85,7 @@ export default function LoginScreen() {
             <View style={styles.inputContainer}>
               <Ionicons
                 name="lock-closed-outline"
-                size={20}
+                size={18}
                 color={Colors.light.textSecondary}
                 style={styles.inputIcon}
               />
@@ -101,7 +103,7 @@ export default function LoginScreen() {
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
+                  size={18}
                   color={Colors.light.textSecondary}
                 />
               </TouchableOpacity>
@@ -111,19 +113,19 @@ export default function LoginScreen() {
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
+              activeOpacity={0.85}
             >
-              {loading ? (
-                <Text style={styles.buttonText}>Connexion...</Text>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>Se connecter</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                </View>
+              <Text style={styles.buttonText}>
+                {loading ? 'Connexion...' : 'Se connecter'}
+              </Text>
+              {!loading && (
+                <Ionicons name="arrow-forward" size={17} color={Colors.light.textOnPrimary} />
               )}
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Pas encore de compte ? </Text>
           <Link href="/(auth)/register" asChild>
@@ -149,21 +151,22 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 36,
   },
-  logoContainer: {
+  logoWrap: {
     width: 64,
     height: 64,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: Colors.light.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontSize: 30,
+    fontWeight: '700',
+    color: Colors.light.primary,
+    letterSpacing: -0.8,
     marginBottom: 8,
   },
   subtitle: {
@@ -173,25 +176,18 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: Colors.light.surfaceElevated,
-    borderRadius: 16,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    ...(Platform.OS === 'web'
-      ? {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.06,
-          shadowRadius: 16,
-        }
-      : {}),
+    borderColor: Colors.light.borderLight,
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: Colors.light.text,
     marginBottom: 20,
+    letterSpacing: -0.3,
   },
   form: {
     gap: 14,
@@ -199,10 +195,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: Colors.light.borderLight,
     paddingHorizontal: 14,
   },
   inputIcon: {
@@ -218,37 +214,36 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: Colors.light.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 6,
   },
   buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: Colors.light.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 28,
   },
   footerText: {
     color: Colors.light.textSecondary,
     fontSize: 14,
   },
   footerLink: {
-    color: Colors.light.primary,
+    color: Colors.light.accent,
     fontSize: 14,
     fontWeight: '600',
   },

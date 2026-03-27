@@ -1,28 +1,60 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import { Colors } from '../src/constants/colors';
+import { UserPreferences } from '../src/types/database';
 import WebContainer from '../src/components/WebContainer';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (session) {
+        checkOnboarding(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        if (session) {
+          await checkOnboarding(session.user.id);
+        } else {
+          setNeedsOnboarding(false);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function checkOnboarding(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('preferences')
+      .eq('id', userId)
+      .single();
+
+    const prefs = data?.preferences as UserPreferences | null;
+    const completed = prefs?.onboardingCompleted ?? false;
+    setNeedsOnboarding(!completed);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (!loading && session && needsOnboarding) {
+      router.replace('/(auth)/onboarding');
+    }
+  }, [loading, session, needsOnboarding]);
 
   if (loading) {
     return (
@@ -36,7 +68,7 @@ export default function RootLayout() {
     <WebContainer>
       <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }}>
-        {session ? (
+        {session && !needsOnboarding ? (
           <Stack.Screen name="(tabs)" />
         ) : (
           <Stack.Screen name="(auth)" />
@@ -44,8 +76,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="restaurant/[id]"
           options={{
-            headerShown: true,
-            headerTitle: 'Restaurant',
+            headerShown: false,
             presentation: 'card',
           }}
         />
