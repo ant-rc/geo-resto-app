@@ -1,8 +1,9 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { Database } from '@/types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -19,10 +20,7 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-// Note: For full type safety, generate types from your Supabase project:
-// npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/database.ts
-// Then use: createClient<Database>(...)
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: Platform.OS === 'web' ? AsyncStorage : ExpoSecureStoreAdapter,
     autoRefreshToken: true,

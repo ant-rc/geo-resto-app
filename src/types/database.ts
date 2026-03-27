@@ -6,6 +6,22 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export interface UserPreferences {
+  cuisineTypes: string[];
+  priceRange: [number, number];
+  maxDistance: number;
+  onboardingCompleted: boolean;
+}
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface RestaurantWithDistance extends Restaurant {
+  distance: number;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -23,6 +39,8 @@ export interface Database {
           cuisine_type: string[];
           opening_hours: Json | null;
           image_url: string | null;
+          images: string[];
+          tags: string[];
           rating: number | null;
           created_at: string;
           updated_at: string;
@@ -40,6 +58,8 @@ export interface Database {
           cuisine_type?: string[];
           opening_hours?: Json | null;
           image_url?: string | null;
+          images?: string[];
+          tags?: string[];
           rating?: number | null;
           created_at?: string;
           updated_at?: string;
@@ -57,6 +77,8 @@ export interface Database {
           cuisine_type?: string[];
           opening_hours?: Json | null;
           image_url?: string | null;
+          images?: string[];
+          tags?: string[];
           rating?: number | null;
           created_at?: string;
           updated_at?: string;
@@ -68,6 +90,7 @@ export interface Database {
           email: string;
           full_name: string | null;
           avatar_url: string | null;
+          preferences: UserPreferences | null;
           created_at: string;
           updated_at: string;
         };
@@ -76,6 +99,7 @@ export interface Database {
           email: string;
           full_name?: string | null;
           avatar_url?: string | null;
+          preferences?: UserPreferences | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +108,7 @@ export interface Database {
           email?: string;
           full_name?: string | null;
           avatar_url?: string | null;
+          preferences?: UserPreferences | null;
           created_at?: string;
           updated_at?: string;
         };
