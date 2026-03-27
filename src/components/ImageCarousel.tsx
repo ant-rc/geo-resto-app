@@ -1,17 +1,16 @@
 import { useState, useRef } from 'react';
 import {
   View,
+  Text,
   Image,
   ScrollView,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ImageCarouselProps {
   images: string[];
@@ -24,10 +23,11 @@ export default function ImageCarousel({
 }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const { width: screenWidth } = useWindowDimensions();
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / SCREEN_WIDTH);
+    const index = Math.round(offsetX / screenWidth);
     setActiveIndex(index);
   }
 
@@ -53,10 +53,11 @@ export default function ImageCarousel({
           <Image
             key={`${uri}-${index}`}
             source={{ uri }}
-            style={[styles.image, { width: SCREEN_WIDTH, height }]}
+            style={[styles.image, { width: screenWidth, height }]}
           />
         ))}
       </ScrollView>
+      <View style={styles.bottomGradient} />
       {images.length > 1 && (
         <View style={styles.pagination}>
           {images.map((_, index) => (
@@ -73,11 +74,9 @@ export default function ImageCarousel({
       {images.length > 1 && (
         <View style={styles.counter}>
           <Ionicons name="images-outline" size={12} color={Colors.light.textOnPrimary} />
-          <View style={styles.counterTextWrap}>
-            <View>
-              <Ionicons name="images-outline" size={0} color="transparent" />
-            </View>
-          </View>
+          <Text style={styles.counterText}>
+            {activeIndex + 1}/{images.length}
+          </Text>
         </View>
       )}
     </View>
@@ -93,6 +92,14 @@ const styles = StyleSheet.create({
   image: {
     resizeMode: 'cover',
   },
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
   pagination: {
     position: 'absolute',
     bottom: 16,
@@ -101,6 +108,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
+    zIndex: 1,
   },
   dot: {
     width: 6,
@@ -125,7 +133,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  counterTextWrap: {
-    display: 'none',
+  counterText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.textOnPrimary,
   },
 });

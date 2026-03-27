@@ -12,18 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { RestaurantFilters } from '@/hooks/useRestaurants';
 import TagChip from './TagChip';
-
-const CUISINE_OPTIONS = [
-  'Français', 'Italien', 'Japonais', 'Indien', 'Mexicain',
-  'Libanais', 'Chinois', 'Thaïlandais', 'Coréen', 'Américain',
-];
-
-const TAG_OPTIONS = [
-  'vegan', 'halal', 'fast', 'brunch', 'terrasse',
-  'livraison', 'sans gluten', 'bio', 'romantique', 'famille',
-];
-
-const DISTANCE_OPTIONS = [1, 3, 5, 10, 20];
+import { CUISINE_OPTIONS, TAG_OPTIONS, DISTANCE_OPTIONS } from '@/constants/data';
 
 const SORT_OPTIONS: { key: RestaurantFilters['sortBy']; label: string }[] = [
   { key: 'distance', label: 'Distance' },

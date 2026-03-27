@@ -7,6 +7,7 @@ interface SectionHeaderProps {
   subtitle?: string;
   actionLabel?: string;
   onAction?: () => void;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 export default function SectionHeader({
@@ -14,11 +15,17 @@ export default function SectionHeader({
   subtitle,
   actionLabel,
   onAction,
+  icon,
 }: SectionHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.textBlock}>
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.titleRow}>
+          {icon && (
+            <Ionicons name={icon} size={18} color={Colors.light.primary} />
+          )}
+          <Text style={styles.title}>{title}</Text>
+        </View>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
       {actionLabel && onAction && (
@@ -40,11 +47,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingHorizontal: 24,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   textBlock: {
     gap: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   title: {
     fontSize: 18,

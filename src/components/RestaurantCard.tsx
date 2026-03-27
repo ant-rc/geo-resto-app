@@ -48,6 +48,18 @@ export default function RestaurantCard({
   );
 }
 
+/* ---------- Image placeholder shared ---------- */
+
+function ImagePlaceholder({ size }: { size: number }) {
+  return (
+    <View style={sharedStyles.imagePlaceholder}>
+      <Ionicons name="restaurant" size={size} color={Colors.light.primaryMuted} />
+    </View>
+  );
+}
+
+/* ---------- MiniVariant ---------- */
+
 function MiniVariant({
   restaurant,
   onPress,
@@ -61,13 +73,13 @@ function MiniVariant({
         {restaurant.image_url ? (
           <Image source={{ uri: restaurant.image_url }} style={miniStyles.image} />
         ) : (
-          <View style={miniStyles.imagePlaceholder}>
-            <Ionicons name="restaurant" size={24} color={Colors.light.primaryMuted} />
-          </View>
+          <ImagePlaceholder size={24} />
         )}
       </View>
       <View style={miniStyles.body}>
-        <Text style={miniStyles.name} numberOfLines={1}>{restaurant.name}</Text>
+        <Text style={miniStyles.name} numberOfLines={1}>
+          {restaurant.name}
+        </Text>
         <Text style={miniStyles.cuisine} numberOfLines={1}>
           {restaurant.cuisine_type?.join(' · ')}
         </Text>
@@ -79,17 +91,16 @@ function MiniVariant({
             </View>
           )}
           <Text style={miniStyles.price}>{'$'.repeat(restaurant.price_range)}</Text>
-          <View style={miniStyles.dot} />
-          <Ionicons name="location-outline" size={12} color={Colors.light.textSecondary} />
-          <Text style={miniStyles.distance}>{formatDistance(restaurant.distance)}</Text>
         </View>
       </View>
-      <View style={miniStyles.arrow}>
-        <Ionicons name="chevron-forward" size={16} color={Colors.light.textSecondary} />
-      </View>
+      {restaurant.distance > 0 && (
+        <Text style={miniStyles.distance}>{formatDistance(restaurant.distance)}</Text>
+      )}
     </TouchableOpacity>
   );
 }
+
+/* ---------- StandardVariant ---------- */
 
 function StandardVariant({
   restaurant,
@@ -106,14 +117,38 @@ function StandardVariant({
 
   return (
     <TouchableOpacity style={stdStyles.card} onPress={onPress} activeOpacity={0.8}>
+      {/* Hero image */}
       <View style={stdStyles.imageWrap}>
         {imageSource ? (
           <Image source={{ uri: imageSource }} style={stdStyles.image} />
         ) : (
-          <View style={stdStyles.imagePlaceholder}>
-            <Ionicons name="restaurant" size={28} color={Colors.light.primaryMuted} />
+          <ImagePlaceholder size={28} />
+        )}
+
+        {/* Gradient overlay */}
+        <View style={stdStyles.imageGradient} />
+
+        {/* Rating badge — bottom-left */}
+        {restaurant.rating != null && (
+          <View style={stdStyles.ratingOverlay}>
+            <Ionicons name="star" size={11} color={Colors.light.warning} />
+            <Text style={stdStyles.ratingOverlayText}>
+              {restaurant.rating.toFixed(1)}
+            </Text>
           </View>
         )}
+
+        {/* Distance badge — bottom-right */}
+        {restaurant.distance > 0 && (
+          <View style={stdStyles.distanceBadge}>
+            <Ionicons name="location" size={10} color={Colors.light.textOnPrimary} />
+            <Text style={stdStyles.distanceText}>
+              {formatDistance(restaurant.distance)}
+            </Text>
+          </View>
+        )}
+
+        {/* Heart button — top-right */}
         {onFavoriteToggle && (
           <TouchableOpacity style={stdStyles.heartBtn} onPress={onFavoriteToggle}>
             <Ionicons
@@ -123,29 +158,19 @@ function StandardVariant({
             />
           </TouchableOpacity>
         )}
-        {restaurant.distance > 0 && (
-          <View style={stdStyles.distanceBadge}>
-            <Ionicons name="location" size={10} color={Colors.light.textOnPrimary} />
-            <Text style={stdStyles.distanceText}>
-              {formatDistance(restaurant.distance)}
-            </Text>
-          </View>
-        )}
       </View>
+
+      {/* Body */}
       <View style={stdStyles.body}>
-        <Text style={stdStyles.name} numberOfLines={1}>{restaurant.name}</Text>
+        <Text style={stdStyles.name} numberOfLines={1}>
+          {restaurant.name}
+        </Text>
         <Text style={stdStyles.cuisine} numberOfLines={1}>
           {restaurant.cuisine_type?.join(' · ')}
         </Text>
-        <View style={stdStyles.meta}>
-          {restaurant.rating != null && (
-            <View style={stdStyles.ratingBadge}>
-              <Ionicons name="star" size={11} color={Colors.light.warning} />
-              <Text style={stdStyles.ratingText}>{restaurant.rating.toFixed(1)}</Text>
-            </View>
-          )}
-          <Text style={stdStyles.price}>{'$'.repeat(restaurant.price_range)}</Text>
-        </View>
+        <Text style={stdStyles.price}>
+          {'$'.repeat(restaurant.price_range)}
+        </Text>
         {restaurant.tags?.length > 0 && (
           <View style={stdStyles.tags}>
             {restaurant.tags.slice(0, 2).map((tag) => (
@@ -158,6 +183,8 @@ function StandardVariant({
   );
 }
 
+/* ---------- WideVariant ---------- */
+
 function WideVariant({
   restaurant,
   onPress,
@@ -167,42 +194,60 @@ function WideVariant({
 }) {
   return (
     <TouchableOpacity style={wideStyles.card} onPress={onPress} activeOpacity={0.8}>
+      {/* Hero image */}
       <View style={wideStyles.imageWrap}>
         {restaurant.image_url ? (
           <Image source={{ uri: restaurant.image_url }} style={wideStyles.image} />
         ) : (
-          <View style={wideStyles.imagePlaceholder}>
-            <Ionicons name="restaurant" size={22} color={Colors.light.primaryMuted} />
+          <ImagePlaceholder size={26} />
+        )}
+
+        {/* Gradient overlay */}
+        <View style={wideStyles.imageGradient} />
+
+        {/* Rating badge — bottom-left */}
+        {restaurant.rating != null && (
+          <View style={wideStyles.ratingOverlay}>
+            <Ionicons name="star" size={12} color={Colors.light.warning} />
+            <Text style={wideStyles.ratingOverlayText}>
+              {restaurant.rating.toFixed(1)}
+            </Text>
           </View>
         )}
       </View>
+
+      {/* Body */}
       <View style={wideStyles.body}>
-        <Text style={wideStyles.name} numberOfLines={1}>{restaurant.name}</Text>
-        <Text style={wideStyles.cuisine} numberOfLines={1}>
-          {restaurant.cuisine_type?.join(' · ')}
+        <Text style={wideStyles.name} numberOfLines={1}>
+          {restaurant.name}
         </Text>
-        <View style={wideStyles.meta}>
-          {restaurant.rating != null && (
-            <>
-              <Ionicons name="star" size={12} color={Colors.light.warning} />
-              <Text style={wideStyles.ratingText}>{restaurant.rating.toFixed(1)}</Text>
-            </>
-          )}
-          <Text style={wideStyles.price}>{'$'.repeat(restaurant.price_range)}</Text>
-          {restaurant.distance > 0 && (
-            <>
-              <View style={wideStyles.dot} />
-              <Text style={wideStyles.distanceText}>
-                {formatDistance(restaurant.distance)}
-              </Text>
-            </>
-          )}
-        </View>
+        <Text style={wideStyles.metaLine} numberOfLines={1}>
+          {[
+            restaurant.cuisine_type?.join(', '),
+            '$'.repeat(restaurant.price_range),
+            restaurant.distance > 0 ? formatDistance(restaurant.distance) : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={Colors.light.border} />
     </TouchableOpacity>
   );
 }
+
+/* ---------- Shared Styles ---------- */
+
+const sharedStyles = StyleSheet.create({
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.light.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
+/* ---------- Mini Styles ---------- */
 
 const miniStyles = StyleSheet.create({
   card: {
@@ -214,94 +259,235 @@ const miniStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.borderLight,
   },
-  imageWrap: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden' },
-  image: { width: '100%', height: '100%' },
-  imagePlaceholder: {
-    width: '100%', height: '100%',
-    backgroundColor: Colors.light.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+  imageWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  body: { flex: 1, paddingHorizontal: 12, gap: 3 },
-  name: { fontSize: 15, fontWeight: '600', color: Colors.light.text, letterSpacing: -0.2 },
-  cuisine: { fontSize: 12, color: Colors.light.textSecondary },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: 12,
+    gap: 3,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+    letterSpacing: -0.2,
+  },
+  cuisine: {
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
   ratingBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.light.warningLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  ratingText: { fontSize: 11, fontWeight: '600', color: Colors.light.text },
-  price: { fontSize: 12, fontWeight: '600', color: Colors.light.success },
-  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.light.textSecondary },
-  distance: { fontSize: 11, color: Colors.light.textSecondary },
-  arrow: { paddingLeft: 4 },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.light.text,
+  },
+  price: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.textSecondary,
+  },
+  distance: {
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    marginRight: 4,
+  },
 });
+
+/* ---------- Standard Styles ---------- */
 
 const stdStyles = StyleSheet.create({
   card: {
-    width: 180,
+    width: 220,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+    ...(Platform.OS === 'web'
+      ? {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+        }
+      : {
+          elevation: 3,
+          shadowColor: '#1A3C34',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+        }),
+  },
+  imageWrap: {
+    height: 180,
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  heartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.light.surfaceGlass,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ratingOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  ratingOverlayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.light.textOnPrimary,
+  },
+  distanceBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  distanceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.light.textOnPrimary,
+  },
+  body: {
+    padding: 12,
+    gap: 3,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+    letterSpacing: -0.2,
+  },
+  cuisine: {
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+  },
+  price: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.textSecondary,
+  },
+  tags: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+  },
+});
+
+/* ---------- Wide Styles ---------- */
+
+const wideStyles = StyleSheet.create({
+  card: {
     backgroundColor: Colors.light.surface,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.light.borderLight,
   },
-  imageWrap: { height: 130, position: 'relative' },
-  image: { width: '100%', height: '100%' },
-  imagePlaceholder: {
-    width: '100%', height: '100%',
-    backgroundColor: Colors.light.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+  imageWrap: {
+    width: '100%',
+    height: 140,
+    position: 'relative',
   },
-  heartBtn: {
-    position: 'absolute', top: 8, right: 8,
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center', alignItems: 'center',
+  image: {
+    width: '100%',
+    height: '100%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
-  distanceBadge: {
-    position: 'absolute', bottom: 8, left: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: 'rgba(26, 60, 52, 0.8)',
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
-  distanceText: { fontSize: 10, fontWeight: '600', color: Colors.light.textOnPrimary },
-  body: { padding: 12, gap: 3 },
-  name: { fontSize: 14, fontWeight: '600', color: Colors.light.text, letterSpacing: -0.2 },
-  cuisine: { fontSize: 11, color: Colors.light.textSecondary },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  ratingBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6,
-  },
-  ratingText: { fontSize: 11, fontWeight: '600', color: Colors.light.text },
-  price: { fontSize: 12, fontWeight: '600', color: Colors.light.success },
-  tags: { flexDirection: 'row', gap: 4, marginTop: 4 },
-});
-
-const wideStyles = StyleSheet.create({
-  card: {
+  ratingOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 18,
-    padding: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.borderLight,
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
-  imageWrap: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden' },
-  image: { width: '100%', height: '100%' },
-  imagePlaceholder: {
-    width: '100%', height: '100%',
-    backgroundColor: Colors.light.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+  ratingOverlayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.light.textOnPrimary,
   },
-  body: { flex: 1, paddingHorizontal: 12, gap: 2 },
-  name: { fontSize: 15, fontWeight: '600', color: Colors.light.text, letterSpacing: -0.2 },
-  cuisine: { fontSize: 12, color: Colors.light.textSecondary },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  ratingText: { fontSize: 12, fontWeight: '600', color: Colors.light.text },
-  price: { fontSize: 12, fontWeight: '600', color: Colors.light.success },
-  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.light.textSecondary },
-  distanceText: { fontSize: 11, color: Colors.light.textSecondary },
+  body: {
+    padding: 12,
+    gap: 2,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.light.text,
+    letterSpacing: -0.2,
+  },
+  metaLine: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
 });

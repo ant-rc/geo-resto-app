@@ -45,7 +45,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.light.primaryLight,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
   chipSmall: {
     paddingHorizontal: 10,
@@ -54,6 +56,7 @@ const styles = StyleSheet.create({
   },
   chipSelected: {
     backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
   },
   label: {
     fontSize: 13,
