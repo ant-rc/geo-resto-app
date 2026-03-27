@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { Coordinates, RestaurantWithDistance } from '@/types/database';
+import { Coordinates, Restaurant, RestaurantWithDistance } from '@/types/database';
 import { enrichWithDistance } from '@/utils/distance';
 
 export interface RestaurantFilters {
@@ -45,7 +45,7 @@ export function useRestaurants(filters: RestaurantFilters = {}): UseRestaurantsR
       query = query.gte('rating', filters.minRating);
     }
 
-    const { data, error } = await query.limit(50);
+    const { data, error } = await query.limit(50) as unknown as { data: Restaurant[] | null; error: Error | null };
 
     if (error) {
       Alert.alert('Erreur', 'Impossible de charger les restaurants');

@@ -76,7 +76,7 @@ export default function OnboardingScreen() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ preferences })
+      .update({ preferences } as never)
       .eq('id', user.id);
 
     if (error) {

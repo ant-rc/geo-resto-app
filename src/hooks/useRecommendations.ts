@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   Coordinates,
+  Restaurant,
   RestaurantWithDistance,
   UserPreferences,
 } from '@/types/database';
@@ -45,10 +46,10 @@ export function useRecommendations(
         .from('profiles')
         .select('preferences')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { preferences: UserPreferences | null } | null };
 
       if (profile?.preferences) {
-        userPrefs = profile.preferences as UserPreferences;
+        userPrefs = profile.preferences;
       }
     }
 
@@ -57,7 +58,7 @@ export function useRecommendations(
     const { data: restaurants } = await supabase
       .from('restaurants')
       .select('*')
-      .limit(50);
+      .limit(50) as { data: Restaurant[] | null };
 
     if (!restaurants) {
       setLoading(false);

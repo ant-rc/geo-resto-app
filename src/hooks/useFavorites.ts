@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Restaurant } from '@/types/database';
+import { Favorite, Restaurant } from '@/types/database';
 
 export interface FavoriteWithRestaurant {
   id: string;
@@ -34,7 +34,7 @@ export function useFavorites(): UseFavoritesResult {
     const { data, error } = await supabase
       .from('favorites')
       .select('id, restaurant_id, restaurant:restaurants (*)')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id) as unknown as { data: (Favorite & { restaurant: Restaurant })[] | null; error: Error | null };
 
     if (error) {
       Alert.alert('Erreur', 'Impossible de charger les favoris');
@@ -80,7 +80,7 @@ export function useFavorites(): UseFavoritesResult {
     } else {
       const { data } = await supabase
         .from('favorites')
-        .insert({ user_id: user.id, restaurant_id: restaurantId })
+        .insert({ user_id: user.id, restaurant_id: restaurantId } as never)
         .select('id, restaurant_id, restaurant:restaurants (*)')
         .single();
 

@@ -42,9 +42,9 @@ export default function RootLayout() {
       .from('profiles')
       .select('preferences')
       .eq('id', userId)
-      .single();
+      .single() as { data: { preferences: UserPreferences | null } | null };
 
-    const prefs = data?.preferences as UserPreferences | null;
+    const prefs = data?.preferences ?? null;
     const completed = prefs?.onboardingCompleted ?? false;
     setNeedsOnboarding(!completed);
     setLoading(false);
