@@ -2,12 +2,14 @@ import {
   View,
   Text,
   FlatList,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFavorites } from '../../src/hooks/useFavorites';
 import { RestaurantWithDistance } from '../../src/types/database';
@@ -71,6 +73,14 @@ export default function FavoritesScreen() {
             <Text style={styles.emptyText}>
               Explorez la carte et sauvegardez{'\n'}vos restaurants préférés
             </Text>
+            <TouchableOpacity
+              style={styles.exploreBtn}
+              onPress={() => router.push('/(tabs)')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="compass-outline" size={16} color={Colors.light.textOnPrimary} />
+              <Text style={styles.exploreBtnText}>Explorer</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -79,7 +89,10 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -88,7 +101,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 64 : 52,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingBottom: 12,
   },
   headerTitle: {
@@ -102,9 +115,18 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     marginTop: 4,
   },
-  list: { paddingHorizontal: 20, paddingBottom: 120, flexGrow: 1 },
-  row: { justifyContent: 'space-between', marginBottom: 14 },
-  cardWrap: { width: '48%' },
+  list: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+    flexGrow: 1,
+  },
+  row: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  cardWrap: {
+    flex: 1,
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -131,5 +153,20 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 24,
+  },
+  exploreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  exploreBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.textOnPrimary,
   },
 });

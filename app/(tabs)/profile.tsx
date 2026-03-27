@@ -7,26 +7,18 @@ import {
   Alert,
   ScrollView,
   Platform,
-  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 import { Profile, UserPreferences } from '../../src/types/database';
-import TagChip from '../../src/components/TagChip';
-
-const CUISINE_OPTIONS = [
-  'Français', 'Italien', 'Japonais', 'Indien', 'Mexicain',
-  'Libanais', 'Chinois', 'Thaïlandais', 'Coréen', 'Américain',
-];
-
-const DISTANCE_OPTIONS = [1, 3, 5, 10, 20];
+import { useFavorites } from '../../src/hooks/useFavorites';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [prefsModalVisible, setPrefsModalVisible] = useState(false);
-  const [editPrefs, setEditPrefs] = useState<UserPreferences | null>(null);
+  const { favorites } = useFavorites();
 
   useEffect(() => {
     fetchProfile();
@@ -53,41 +45,14 @@ export default function ProfileScreen() {
     setLoading(false);
   }
 
-  function openPreferences() {
-    const currentPrefs = (profile?.preferences as UserPreferences | null) ?? {
-      cuisineTypes: [],
-      priceRange: [1, 4] as [number, number],
-      maxDistance: 5,
-      onboardingCompleted: true,
-    };
-    setEditPrefs(currentPrefs);
-    setPrefsModalVisible(true);
-  }
-
-  async function savePreferences() {
-    if (!profile || !editPrefs) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ preferences: { ...editPrefs, onboardingCompleted: true } })
-      .eq('id', profile.id);
-
-    if (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder les préférences');
-    } else {
-      setProfile({ ...profile, preferences: { ...editPrefs, onboardingCompleted: true } });
-      setPrefsModalVisible(false);
-    }
-  }
-
   async function handleLogout() {
     Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      'Deconnexion',
+      'Etes-vous sur de vouloir vous deconnecter ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Déconnexion',
+          text: 'Deconnexion',
           style: 'destructive',
           onPress: async () => {
             await supabase.auth.signOut();
@@ -97,277 +62,513 @@ export default function ProfileScreen() {
     );
   }
 
-  function MenuItem({
-    icon,
-    title,
-    subtitle,
-    onPress,
-    destructive = false,
-  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    title: string;
-    subtitle?: string;
-    onPress: () => void;
-    destructive?: boolean;
-  }) {
+  const prefs = profile?.preferences as UserPreferences | null;
+  const userName = profile?.full_name || 'Utilisateur';
+  const userInitial = userName.charAt(0).toUpperCase();
+  const favoritesCount = favorites.length;
+  const cuisineTypes = prefs?.cuisineTypes ?? [];
+
+  if (loading) {
     return (
-      <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-        <View style={styles.menuItemLeft}>
-          <View style={[styles.menuIcon, destructive && styles.menuIconDestructive]}>
-            <Ionicons
-              name={icon}
-              size={17}
-              color={destructive ? Colors.light.error : Colors.light.primary}
-            />
-          </View>
-          <View>
-            <Text
-              style={[
-                styles.menuItemText,
-                destructive && styles.menuItemTextDestructive,
-              ]}
-            >
-              {title}
-            </Text>
-            {subtitle && (
-              <Text style={styles.menuItemSubtitle}>{subtitle}</Text>
-            )}
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.light.border} />
-      </TouchableOpacity>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
     );
   }
 
-  const prefs = profile?.preferences as UserPreferences | null;
-
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Profile header */}
+      {/* Header with avatar, name, subtitle */}
       <View style={styles.header}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={32} color={Colors.light.primary} />
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitial}>{userInitial}</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.cameraBtn} activeOpacity={0.8}>
+            <Ionicons name="camera" size={14} color={Colors.light.textOnPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.nameBlock}>
+          <Text style={styles.name}>{userName}</Text>
+          <Text style={styles.subtitle}>Gourmet Explorer</Text>
+        </View>
+
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statLabel}>RESERVATIONS</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{favoritesCount}</Text>
+            <Text style={styles.statLabel}>FAVORIS</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statLabel}>AVIS</Text>
           </View>
         </View>
-        <Text style={styles.name}>
-          {profile?.full_name || 'Utilisateur'}
-        </Text>
-        <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
-      {/* Account */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Compte</Text>
-        <View style={styles.menuCard}>
-          <MenuItem
-            icon="person-outline"
-            title="Modifier le profil"
-            onPress={() => Alert.alert('À venir', 'Cette fonctionnalité arrive bientôt')}
-          />
-          <View style={styles.separator} />
-          <MenuItem
-            icon="notifications-outline"
-            title="Notifications"
-            onPress={() => Alert.alert('À venir', 'Cette fonctionnalité arrive bientôt')}
-          />
-          <View style={styles.separator} />
-          <MenuItem
-            icon="lock-closed-outline"
-            title="Confidentialité"
-            onPress={() => Alert.alert('À venir', 'Cette fonctionnalité arrive bientôt')}
-          />
+      <View style={styles.contentArea}>
+        {/* Allergy / Cuisine Profile Card */}
+        <View style={styles.allergyCard}>
+          <View style={styles.allergyHeader}>
+            <View style={styles.allergyHeaderLeft}>
+              <View style={styles.shieldIcon}>
+                <Ionicons name="shield-checkmark" size={20} color={Colors.light.textOnPrimary} />
+              </View>
+              <Text style={styles.allergyTitle}>Mon profil culinaire</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => Alert.alert('A venir', 'Edition des preferences bientot disponible')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.allergyEditBtn}>Editer</Text>
+            </TouchableOpacity>
+          </View>
+
+          {cuisineTypes.length > 0 ? (
+            <View style={styles.allergyChips}>
+              {cuisineTypes.map((cuisine) => (
+                <View key={cuisine} style={styles.allergyChip}>
+                  <Ionicons name="restaurant" size={12} color={Colors.light.secondary} />
+                  <Text style={styles.allergyChipText}>{cuisine}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.allergyChips}>
+              <View style={styles.allergyChip}>
+                <Text style={styles.allergyChipText}>Non definies</Text>
+              </View>
+            </View>
+          )}
+
+          <Text style={styles.allergyDescription}>
+            &quot;Nous filtrerons automatiquement les restaurants selon vos preferences.&quot;
+          </Text>
         </View>
-      </View>
 
-      {/* Preferences */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Préférences</Text>
-        <View style={styles.menuCard}>
-          <MenuItem
-            icon="restaurant-outline"
-            title="Préférences culinaires"
-            subtitle={prefs?.cuisineTypes?.length
-              ? prefs.cuisineTypes.slice(0, 3).join(', ')
-              : 'Non définies'}
-            onPress={openPreferences}
-          />
-          <View style={styles.separator} />
-          <MenuItem
-            icon="location-outline"
-            title="Rayon de recherche"
-            subtitle={prefs?.maxDistance ? `${prefs.maxDistance} km` : '5 km'}
-            onPress={openPreferences}
-          />
+        {/* Activity Section */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionLabel}>ACTIVITE</Text>
+
+          <TouchableOpacity
+            style={styles.activityItem}
+            onPress={() => router.push('/(tabs)/favorites')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.activityItemLeft}>
+              <View style={styles.activityIconPrimary}>
+                <Ionicons name="heart" size={18} color={Colors.light.primary} />
+              </View>
+              <Text style={styles.activityItemText}>Mes favoris</Text>
+            </View>
+            <View style={styles.activityItemRight}>
+              <Text style={styles.activityCount}>{favoritesCount}</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.activityItem}
+            onPress={() => Alert.alert('A venir', 'Les reservations arrivent bientot')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.activityItemLeft}>
+              <View style={styles.activityIconPrimary}>
+                <Ionicons name="calendar" size={18} color={Colors.light.primary} />
+              </View>
+              <Text style={styles.activityItemText}>Mes reservations</Text>
+            </View>
+            <View style={styles.activityItemRight}>
+              <View style={styles.newBadge}>
+                <Text style={styles.newBadgeText}>Nouveau</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.activityItem}
+            onPress={() => Alert.alert('A venir', 'Les offres arrivent bientot')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.activityItemLeft}>
+              <View style={styles.activityIconPrimary}>
+                <Ionicons name="pricetag" size={18} color={Colors.light.primary} />
+              </View>
+              <Text style={styles.activityItemText}>Offres & codes promo</Text>
+            </View>
+            <View style={styles.activityItemRight}>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Support */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
-        <View style={styles.menuCard}>
-          <MenuItem
-            icon="help-circle-outline"
-            title="Aide"
-            onPress={() => Alert.alert('À venir', 'Cette fonctionnalité arrive bientôt')}
-          />
-          <View style={styles.separator} />
-          <MenuItem
-            icon="chatbubble-outline"
-            title="Nous contacter"
-            onPress={() => Alert.alert('À venir', 'Cette fonctionnalité arrive bientôt')}
-          />
+        {/* Preferences Section */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionLabel}>PREFERENCES</Text>
+
+          <TouchableOpacity
+            style={styles.activityItem}
+            onPress={() => Alert.alert('A venir', 'Les notifications arrivent bientot')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.activityItemLeft}>
+              <View style={styles.activityIconMuted}>
+                <Ionicons name="notifications" size={18} color={Colors.light.text} />
+              </View>
+              <Text style={styles.activityItemText}>Notifications</Text>
+            </View>
+            <View style={styles.activityItemRight}>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.activityItem}
+            onPress={() => Alert.alert('A venir', 'Les parametres arrivent bientot')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.activityItemLeft}>
+              <View style={styles.activityIconMuted}>
+                <Ionicons name="settings" size={18} color={Colors.light.text} />
+              </View>
+              <Text style={styles.activityItemText}>Parametres</Text>
+            </View>
+            <View style={styles.activityItemRight}>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
+
+        {/* Sign Out */}
+        <TouchableOpacity
+          style={styles.signOutBtn}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={22} color={Colors.light.error} />
+          <Text style={styles.signOutText}>Deconnexion</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Logout */}
-      <View style={styles.section}>
-        <View style={styles.menuCard}>
-          <MenuItem
-            icon="log-out-outline"
-            title="Déconnexion"
-            onPress={handleLogout}
-            destructive
-          />
-        </View>
-      </View>
-
-      <Text style={styles.version}>Tastly v2.0.0</Text>
       <View style={{ height: 120 }} />
-
-      {/* Preferences Modal */}
-      <Modal
-        visible={prefsModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setPrefsModalVisible(false)}
-      >
-        <View style={modalStyles.container}>
-          <View style={modalStyles.header}>
-            <TouchableOpacity onPress={() => setPrefsModalVisible(false)}>
-              <Ionicons name="close" size={24} color={Colors.light.text} />
-            </TouchableOpacity>
-            <Text style={modalStyles.headerTitle}>Préférences</Text>
-            <TouchableOpacity onPress={savePreferences}>
-              <Text style={modalStyles.saveText}>Sauvegarder</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView contentContainerStyle={modalStyles.content}>
-            <View style={modalStyles.section}>
-              <Text style={modalStyles.sectionTitle}>Cuisines préférées</Text>
-              <View style={modalStyles.grid}>
-                {CUISINE_OPTIONS.map((cuisine) => (
-                  <TagChip
-                    key={cuisine}
-                    label={cuisine}
-                    selected={editPrefs?.cuisineTypes?.includes(cuisine)}
-                    onPress={() => {
-                      if (!editPrefs) return;
-                      const current = editPrefs.cuisineTypes;
-                      setEditPrefs({
-                        ...editPrefs,
-                        cuisineTypes: current.includes(cuisine)
-                          ? current.filter((c) => c !== cuisine)
-                          : [...current, cuisine],
-                      });
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={modalStyles.section}>
-              <Text style={modalStyles.sectionTitle}>Distance max</Text>
-              <View style={modalStyles.grid}>
-                {DISTANCE_OPTIONS.map((km) => (
-                  <TagChip
-                    key={km}
-                    label={`${km} km`}
-                    selected={editPrefs?.maxDistance === km}
-                    onPress={() => {
-                      if (!editPrefs) return;
-                      setEditPrefs({ ...editPrefs, maxDistance: km });
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 15,
+    color: Colors.light.textSecondary,
+  },
+
+  /* Header */
   header: {
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 72 : 60,
-    paddingBottom: 28,
+    paddingTop: Platform.OS === 'ios' ? 64 : 52,
+    paddingBottom: 24,
+    gap: 16,
   },
-  avatarRing: { marginBottom: 16 },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarRing: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 4,
+    borderColor: Colors.light.primary,
+    padding: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+    }),
+  },
   avatar: {
-    width: 84, height: 84, borderRadius: 42,
+    flex: 1,
+    borderRadius: 50,
     backgroundColor: Colors.light.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2.5, borderColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: Colors.light.primary,
+  },
+  cameraBtn: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: Colors.light.background,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+    }),
+  },
+  nameBlock: {
+    alignItems: 'center',
+    gap: 4,
   },
   name: {
-    fontSize: 24, fontWeight: '700', color: Colors.light.text,
-    letterSpacing: -0.5, marginBottom: 4,
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.light.text,
+    letterSpacing: -0.5,
   },
-  email: { fontSize: 14, color: Colors.light.textSecondary },
-  section: { marginTop: 24, paddingHorizontal: 24 },
-  sectionTitle: {
-    fontSize: 12, fontWeight: '600', color: Colors.light.textSecondary,
-    marginBottom: 10, marginLeft: 4,
-    textTransform: 'uppercase', letterSpacing: 0.8,
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.textSecondary,
   },
-  menuCard: {
-    backgroundColor: Colors.light.surface, borderRadius: 20,
-    borderWidth: 1, borderColor: Colors.light.borderLight, overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', paddingVertical: 13, paddingHorizontal: 14,
-  },
-  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuIcon: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: Colors.light.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  menuIconDestructive: { backgroundColor: '#FEE2E2' },
-  menuItemText: {
-    fontSize: 15, color: Colors.light.text, fontWeight: '500', letterSpacing: -0.1,
-  },
-  menuItemTextDestructive: { color: Colors.light.error },
-  menuItemSubtitle: {
-    fontSize: 12, color: Colors.light.textSecondary, marginTop: 1,
-  },
-  separator: { height: 1, backgroundColor: Colors.light.borderLight, marginLeft: 60 },
-  version: {
-    textAlign: 'center', color: Colors.light.textSecondary,
-    fontSize: 12, marginTop: 32, letterSpacing: 0.3,
-  },
-});
 
-const modalStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 16 : 20, paddingBottom: 16,
-    borderBottomWidth: 1, borderBottomColor: Colors.light.borderLight,
+  /* Stats */
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 28,
+    marginTop: 4,
   },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: Colors.light.text },
-  saveText: { fontSize: 15, fontWeight: '600', color: Colors.light.accent },
-  content: { padding: 20, paddingBottom: 40 },
-  section: { marginBottom: 28 },
-  sectionTitle: {
-    fontSize: 15, fontWeight: '600', color: Colors.light.text,
-    marginBottom: 12, letterSpacing: -0.2,
+  statItem: {
+    alignItems: 'center',
+    gap: 2,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+    letterSpacing: 1.2,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.light.border,
+  },
+
+  /* Content area */
+  contentArea: {
+    paddingHorizontal: 20,
+    gap: 24,
+  },
+
+  /* Allergy / Cuisine Profile Card */
+  allergyCard: {
+    backgroundColor: Colors.light.accentLight,
+    borderWidth: 2,
+    borderColor: Colors.light.secondary,
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+  },
+  allergyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  allergyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shieldIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.light.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.light.secondary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+      default: {
+        shadowColor: Colors.light.secondary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+    }),
+  },
+  allergyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  allergyEditBtn: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.light.secondary,
+  },
+  allergyChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  allergyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.light.background,
+    borderWidth: 2,
+    borderColor: Colors.light.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  allergyChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  allergyDescription: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: Colors.light.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+
+  /* Section */
+  sectionBlock: {
+    gap: 8,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.light.textSecondary,
+    letterSpacing: 2.2,
+    marginLeft: 8,
+    marginBottom: 4,
+  },
+
+  /* Activity items */
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+  },
+  activityItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  activityIconPrimary: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(13, 148, 136, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activityIconMuted: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.light.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activityItemText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  activityItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activityCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+  },
+  newBadge: {
+    backgroundColor: Colors.light.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  newBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.light.textOnPrimary,
+  },
+
+  /* Sign out */
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  signOutText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.light.error,
+  },
 });
