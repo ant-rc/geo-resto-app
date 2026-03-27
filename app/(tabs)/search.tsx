@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,139 +7,158 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { supabase } from '../../src/lib/supabase';
-import { Restaurant } from '../../src/types/database';
+import { useLocation } from '../../src/hooks/useLocation';
+import { useRestaurants, RestaurantFilters } from '../../src/hooks/useRestaurants';
+import RestaurantCard from '../../src/components/RestaurantCard';
+import FilterModal from '../../src/components/FilterModal';
+import TagChip from '../../src/components/TagChip';
 
 const CUISINE_TYPES = [
-  'Français',
-  'Italien',
-  'Japonais',
-  'Chinois',
-  'Mexicain',
-  'Indien',
-  'Libanais',
-  'Thaïlandais',
+  { label: 'Français', icon: 'flag-outline' as const },
+  { label: 'Italien', icon: 'pizza-outline' as const },
+  { label: 'Japonais', icon: 'fish-outline' as const },
+  { label: 'Indien', icon: 'flame-outline' as const },
+  { label: 'Mexicain', icon: 'leaf-outline' as const },
+  { label: 'Libanais', icon: 'nutrition-outline' as const },
+];
+
+const SORT_OPTIONS: { key: RestaurantFilters['sortBy']; label: string }[] = [
+  { key: 'distance', label: 'Distance' },
+  { key: 'rating', label: 'Note' },
+  { key: 'price', label: 'Prix' },
 ];
 
 export default function SearchScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [searchQuery, setSearchQuery] = useState(params.q ?? '');
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<RestaurantFilters['sortBy']>('distance');
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<RestaurantFilters>({});
+  const { location } = useLocation();
 
-  useEffect(() => {
-    searchRestaurants();
-  }, [searchQuery, selectedCuisine]);
+  const filters = useMemo<RestaurantFilters>(
+    () => ({
+      searchQuery,
+      cuisineType: selectedCuisine,
+      sortBy,
+      userLocation: location,
+      ...advancedFilters,
+    }),
+    [searchQuery, selectedCuisine, sortBy, location, advancedFilters]
+  );
 
-  async function searchRestaurants() {
-    setLoading(true);
-    let query = supabase.from('restaurants').select('*');
+  const { restaurants, loading } = useRestaurants(filters);
 
-    if (searchQuery) {
-      query = query.ilike('name', `%${searchQuery}%`);
+  function handleApplyFilters(newFilters: RestaurantFilters) {
+    setAdvancedFilters(newFilters);
+    if (newFilters.cuisineType) {
+      setSelectedCuisine(newFilters.cuisineType);
     }
-
-    if (selectedCuisine) {
-      query = query.contains('cuisine_type', [selectedCuisine]);
+    if (newFilters.sortBy) {
+      setSortBy(newFilters.sortBy);
     }
-
-    const { data, error } = await query.limit(20);
-
-    if (error) {
-      console.error('Error searching restaurants:', error);
-    } else if (data) {
-      setRestaurants(data);
-    }
-    setLoading(false);
   }
 
-  function renderPriceRange(range: number) {
-    return '€'.repeat(range);
-  }
-
-  function renderRestaurantItem({ item }: { item: Restaurant }) {
-    return (
-      <TouchableOpacity
-        style={styles.restaurantCard}
-        onPress={() => router.push(`/restaurant/${item.id}`)}
-      >
-        <View style={styles.restaurantInfo}>
-          <Text style={styles.restaurantName}>{item.name}</Text>
-          <Text style={styles.restaurantCuisine}>
-            {item.cuisine_type?.join(', ')}
-          </Text>
-          <View style={styles.restaurantMeta}>
-            <Text style={styles.priceRange}>
-              {renderPriceRange(item.price_range)}
-            </Text>
-            {item.rating && (
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color={Colors.light.warning} />
-                <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          color={Colors.light.textSecondary}
-        />
-      </TouchableOpacity>
-    );
-  }
+  const activeFilterCount = [
+    advancedFilters.priceRange,
+    advancedFilters.maxDistance,
+    advancedFilters.tags?.length,
+    advancedFilters.minRating,
+  ].filter(Boolean).length;
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search"
-          size={20}
-          color={Colors.light.textSecondary}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher un restaurant..."
-          placeholderTextColor={Colors.light.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Recherche</Text>
+        <Text style={styles.headerSubtitle}>Trouvez votre prochaine table</Text>
       </View>
 
-      <FlatList
-        horizontal
-        data={CUISINE_TYPES}
-        keyExtractor={(item) => item}
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterList}
-        contentContainerStyle={styles.filterContent}
-        renderItem={({ item }) => (
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Nom, cuisine, quartier..."
+            placeholderTextColor={Colors.light.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={Colors.light.textSecondary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={[
-              styles.filterChip,
-              selectedCuisine === item && styles.filterChipActive,
-            ]}
-            onPress={() =>
-              setSelectedCuisine(selectedCuisine === item ? null : item)
-            }
+            style={styles.filterIconBtn}
+            onPress={() => setFiltersVisible(true)}
           >
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedCuisine === item && styles.filterChipTextActive,
-              ]}
-            >
-              {item}
-            </Text>
+            <Ionicons name="options-outline" size={17} color={Colors.light.primary} />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-        )}
-      />
+        </View>
+      </View>
 
+      {/* Sort pills */}
+      <View style={styles.sortRow}>
+        {SORT_OPTIONS.map((option) => (
+          <TagChip
+            key={option.key}
+            label={option.label}
+            selected={sortBy === option.key}
+            onPress={() => setSortBy(option.key)}
+            size="small"
+          />
+        ))}
+      </View>
+
+      {/* Cuisine grid */}
+      {!searchQuery && !selectedCuisine && (
+        <View style={styles.cuisineSection}>
+          <Text style={styles.sectionLabel}>Catégories</Text>
+          <View style={styles.cuisineGrid}>
+            {CUISINE_TYPES.map((c) => (
+              <TouchableOpacity
+                key={c.label}
+                style={styles.cuisineCard}
+                onPress={() => setSelectedCuisine(c.label)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.cuisineIcon}>
+                  <Ionicons name={c.icon} size={22} color={Colors.light.primary} />
+                </View>
+                <Text style={styles.cuisineLabel}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Active filter */}
+      {selectedCuisine && (
+        <View style={styles.activeFilter}>
+          <TouchableOpacity
+            style={styles.activeFilterChip}
+            onPress={() => setSelectedCuisine(null)}
+          >
+            <Text style={styles.activeFilterText}>{selectedCuisine}</Text>
+            <Ionicons name="close" size={14} color={Colors.light.textOnPrimary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Results */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
@@ -148,20 +167,33 @@ export default function SearchScreen() {
         <FlatList
           data={restaurants}
           keyExtractor={(item) => item.id}
-          renderItem={renderRestaurantItem}
-          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <RestaurantCard restaurant={item} variant="wide" />
+          )}
+          contentContainerStyle={styles.resultsList}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            restaurants.length > 0 ? (
+              <Text style={styles.resultsCount}>
+                {restaurants.length} résultats
+              </Text>
+            ) : null
+          }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="restaurant-outline"
-                size={48}
-                color={Colors.light.textSecondary}
-              />
-              <Text style={styles.emptyText}>Aucun restaurant trouvé</Text>
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={40} color={Colors.light.border} />
+              <Text style={styles.emptyText}>Aucun résultat</Text>
             </View>
           }
         />
       )}
+
+      <FilterModal
+        visible={filtersVisible}
+        onClose={() => setFiltersVisible(false)}
+        filters={filters}
+        onApply={handleApplyFilters}
+      />
     </View>
   );
 }
@@ -171,111 +203,153 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    margin: 16,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-    color: Colors.light.text,
-  },
-  filterList: {
-    maxHeight: 50,
-  },
-  filterContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.light.surface,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    marginRight: 8,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
-  },
-  filterChipText: {
-    color: Colors.light.text,
-    fontSize: 14,
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  listContent: {
-    padding: 16,
-  },
-  restaurantCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  restaurantInfo: {
-    flex: 1,
-  },
-  restaurantName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.light.text,
-    marginBottom: 4,
-  },
-  restaurantCuisine: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginBottom: 8,
-  },
-  restaurantMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  priceRange: {
-    color: Colors.light.success,
-    fontWeight: '600',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  rating: {
-    color: Colors.light.text,
-    fontWeight: '500',
-  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyContainer: {
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 64 : 52,
+    paddingHorizontal: 24,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.light.text,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: Colors.light.textSecondary,
+    marginTop: 4,
+  },
+  searchWrap: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.surface,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+  },
+  searchInput: {
     flex: 1,
+    fontSize: 15,
+    color: Colors.light.text,
+  },
+  filterIconBtn: {
+    position: 'relative',
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: Colors.light.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.light.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.light.textOnPrimary,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    gap: 8,
+    marginBottom: 16,
+  },
+  cuisineSection: {
+    paddingHorizontal: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginBottom: 14,
+    letterSpacing: -0.2,
+  },
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  cuisineCard: {
+    width: '30%',
+    backgroundColor: Colors.light.surface,
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+  },
+  cuisineIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.light.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cuisineLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.text,
+    letterSpacing: 0.1,
+  },
+  activeFilter: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+  },
+  activeFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  activeFilterText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.light.textOnPrimary,
+  },
+  resultsList: {
+    paddingHorizontal: 24,
+    paddingBottom: 120,
+  },
+  resultsCount: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  emptyState: {
+    alignItems: 'center',
     paddingTop: 60,
+    gap: 12,
   },
   emptyText: {
-    marginTop: 16,
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.light.textSecondary,
   },
 });

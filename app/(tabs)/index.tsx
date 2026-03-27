@@ -1,164 +1,208 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   ActivityIndicator,
-  FlatList,
   TouchableOpacity,
+  TextInput,
+  ScrollView,
+  FlatList,
+  Animated,
+  Dimensions,
+  Platform,
 } from 'react-native';
-import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { supabase } from '../../src/lib/supabase';
-import { Restaurant } from '../../src/types/database';
+import { useLocation } from '../../src/hooks/useLocation';
+import { useRecommendations } from '../../src/hooks/useRecommendations';
+import { useFavorites } from '../../src/hooks/useFavorites';
+import { RestaurantFilters } from '../../src/hooks/useRestaurants';
+import { RestaurantWithDistance } from '../../src/types/database';
 import MapSection from '../../src/components/MapSection';
+import RestaurantCard from '../../src/components/RestaurantCard';
+import SectionHeader from '../../src/components/SectionHeader';
+import FilterModal from '../../src/components/FilterModal';
+import { router } from 'expo-router';
 
-const DEFAULT_REGION = {
-  latitude: 48.8566,
-  longitude: 2.3522,
-  latitudeDelta: 0.0922,
-  longitudeDelta: 0.0421,
-};
-
-function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/restaurant/${restaurant.id}`)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardImagePlaceholder}>
-        <Ionicons name="restaurant" size={28} color={Colors.light.primary} />
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardName} numberOfLines={1}>
-          {restaurant.name}
-        </Text>
-        <Text style={styles.cardCuisine} numberOfLines={1}>
-          {restaurant.cuisine_type?.join(', ')}
-        </Text>
-        <View style={styles.cardMeta}>
-          <Text style={styles.cardPrice}>
-            {'$'.repeat(restaurant.price_range)}
-          </Text>
-          {restaurant.rating && (
-            <View style={styles.cardRating}>
-              <Ionicons name="star" size={12} color={Colors.light.warning} />
-              <Text style={styles.cardRatingText}>
-                {restaurant.rating.toFixed(1)}
-              </Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.cardAddress}>
-          <Ionicons
-            name="location-outline"
-            size={12}
-            color={Colors.light.textSecondary}
-          />
-          <Text style={styles.cardAddressText} numberOfLines={1}>
-            {restaurant.address}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SHEET_PEEK = 300;
+const SHEET_FULL = SCREEN_HEIGHT * 0.75;
 
 export default function HomeScreen() {
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { location, loading: locationLoading } = useLocation();
+  const { recommended, nearby, topRated, loading: recsLoading } = useRecommendations(location);
+  const { favoriteIds, toggleFavorite } = useFavorites();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [filters, setFilters] = useState<RestaurantFilters>({});
+  const sheetAnim = useRef(new Animated.Value(SHEET_PEEK)).current;
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission de localisation refusée');
-        setLoading(false);
-        return;
-      }
+  const allRestaurants = nearby;
+  const loading = locationLoading || recsLoading;
 
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc);
-      setLoading(false);
-    })();
-  }, []);
-
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
-  async function fetchRestaurants() {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .limit(50);
-
-    if (error) {
-      console.error('Error fetching restaurants:', error);
-    } else if (data) {
-      setRestaurants(data);
-    }
-  }
-
-  function handleMarkerPress(restaurant: Restaurant) {
+  function handleMarkerPress(restaurant: RestaurantWithDistance) {
     router.push(`/restaurant/${restaurant.id}`);
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
+  function toggleSheet() {
+    const toValue = sheetExpanded ? SHEET_PEEK : SHEET_FULL;
+    Animated.spring(sheetAnim, {
+      toValue,
+      useNativeDriver: false,
+      tension: 65,
+      friction: 11,
+    }).start();
+    setSheetExpanded(!sheetExpanded);
   }
 
   const region = location
     ? {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }
-    : DEFAULT_REGION;
+    : {
+        latitude: 48.8566,
+        longitude: 2.3522,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <View style={styles.loaderWrap}>
+          <Ionicons name="compass" size={32} color={Colors.light.primary} />
+          <ActivityIndicator size="small" color={Colors.light.accent} style={{ marginTop: 12 }} />
+          <Text style={styles.loaderText}>Localisation...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <MapSection
-        restaurants={restaurants}
+        restaurants={allRestaurants}
         region={region}
         onMarkerPress={handleMarkerPress}
       />
 
-      {errorMsg && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
+      {/* Floating search bar */}
+      <View style={styles.searchFloat}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Restaurant, cuisine, quartier..."
+            placeholderTextColor={Colors.light.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={() => router.push({ pathname: '/(tabs)/search', params: { q: searchQuery } })}
+          />
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => setFiltersVisible(true)}
+          >
+            <Ionicons name="options-outline" size={17} color={Colors.light.primary} />
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
-      <FlatList
-        data={restaurants}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <RestaurantCard restaurant={item} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="restaurant-outline"
-              size={48}
-              color={Colors.light.textSecondary}
+      {/* My location button */}
+      <TouchableOpacity style={styles.locateBtn} activeOpacity={0.8}>
+        <Ionicons name="navigate" size={18} color={Colors.light.primary} />
+      </TouchableOpacity>
+
+      {/* Bottom sheet */}
+      <Animated.View style={[styles.sheet, { height: sheetAnim }]}>
+        <TouchableOpacity
+          style={styles.sheetHandle}
+          onPress={toggleSheet}
+          activeOpacity={0.8}
+        >
+          <View style={styles.sheetHandleBar} />
+        </TouchableOpacity>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.sheetContent}
+        >
+          {/* Recommended section */}
+          {recommended.length > 0 && (
+            <View style={styles.sectionWrap}>
+              <SectionHeader
+                title="Recommandés pour vous"
+                subtitle="Basé sur vos préférences"
+              />
+              <FlatList
+                data={recommended}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <RestaurantCard
+                    restaurant={item}
+                    variant="standard"
+                    isFavorite={favoriteIds.has(item.id)}
+                    onFavoriteToggle={() => toggleFavorite(item.id)}
+                  />
+                )}
+              />
+            </View>
+          )}
+
+          {/* Nearby section */}
+          <View style={styles.sectionWrap}>
+            <SectionHeader
+              title="À proximité"
+              subtitle={`${nearby.length} restaurants`}
             />
-            <Text style={styles.emptyTitle}>Aucun restaurant</Text>
-            <Text style={styles.emptyText}>
-              Aucun restaurant trouvé dans cette zone
-            </Text>
+            <View style={styles.miniList}>
+              {nearby.slice(0, 8).map((r) => (
+                <RestaurantCard key={r.id} restaurant={r} variant="mini" />
+              ))}
+            </View>
           </View>
-        }
+
+          {/* Top rated section */}
+          {topRated.length > 0 && (
+            <View style={styles.sectionWrap}>
+              <SectionHeader
+                title="Les mieux notés"
+                subtitle="Les favoris de la communauté"
+              />
+              <FlatList
+                data={topRated}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                keyExtractor={(item) => `top-${item.id}`}
+                renderItem={({ item }) => (
+                  <RestaurantCard
+                    restaurant={item}
+                    variant="standard"
+                    isFavorite={favoriteIds.has(item.id)}
+                    onFavoriteToggle={() => toggleFavorite(item.id)}
+                  />
+                )}
+              />
+            </View>
+          )}
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </Animated.View>
+
+      <FilterModal
+        visible={filtersVisible}
+        onClose={() => setFiltersVisible(false)}
+        filters={filters}
+        onApply={setFilters}
       />
     </View>
   );
@@ -175,103 +219,128 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.light.background,
   },
-  loadingText: {
-    marginTop: 16,
+  loaderWrap: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  loaderText: {
+    marginTop: 8,
+    fontSize: 14,
     color: Colors.light.textSecondary,
-    fontSize: 16,
+    letterSpacing: 0.3,
   },
-  errorBanner: {
+  searchFloat: {
     position: 'absolute',
-    top: 60,
-    left: 16,
-    right: 16,
-    backgroundColor: Colors.light.warning,
-    padding: 12,
-    borderRadius: 8,
+    top: Platform.OS === 'ios' ? 60 : 48,
+    left: 20,
+    right: 20,
   },
-  errorText: {
-    color: '#FFFFFF',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  listContent: {
-    padding: 16,
-    gap: 12,
-  },
-  // Card styles
-  card: {
+  searchBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.light.surfaceElevated,
-    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: Colors.light.surfaceGlass,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 10,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    overflow: 'hidden',
+    borderColor: Colors.light.surfaceGlassBorder,
+    ...(Platform.OS === 'web'
+      ? {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+        }
+      : {
+          elevation: 8,
+          shadowColor: '#1A3C34',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.1,
+          shadowRadius: 16,
+        }),
   },
-  cardImagePlaceholder: {
-    width: 80,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.light.text,
+    letterSpacing: 0.1,
+  },
+  filterBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: Colors.light.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cardBody: {
-    flex: 1,
-    padding: 12,
-    gap: 4,
-  },
-  cardName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  cardCuisine: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  cardMeta: {
-    flexDirection: 'row',
+  locateBtn: {
+    position: 'absolute',
+    right: 20,
+    bottom: SHEET_PEEK + 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.light.surface,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    ...(Platform.OS !== 'web'
+      ? {
+          elevation: 6,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+        }
+      : {}),
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    ...(Platform.OS === 'web'
+      ? {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.08,
+          shadowRadius: 24,
+        }
+      : {
+          elevation: 16,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.1,
+          shadowRadius: 20,
+        }),
+  },
+  sheetHandle: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  sheetHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.light.border,
+  },
+  sheetContent: {
+    paddingBottom: 20,
+  },
+  sectionWrap: {
+    marginBottom: 24,
+  },
+  horizontalList: {
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  miniList: {
+    paddingHorizontal: 20,
     gap: 10,
-    marginTop: 2,
-  },
-  cardPrice: {
-    fontSize: 13,
-    color: Colors.light.success,
-    fontWeight: '600',
-  },
-  cardRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  cardRatingText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.light.text,
-  },
-  cardAddress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  cardAddressText: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    flex: 1,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyTitle: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  emptyText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: Colors.light.textSecondary,
   },
 });
