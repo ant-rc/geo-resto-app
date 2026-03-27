@@ -23,14 +23,15 @@ function TabIcon({
 
   return (
     <View style={styles.tabItem}>
-      <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-        <Ionicons
-          name={iconMap[name]}
-          size={21}
-          color={focused ? Colors.light.primary : Colors.light.textSecondary}
-        />
-      </View>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+      <Ionicons
+        name={iconMap[name]}
+        size={22}
+        color={focused ? Colors.light.primary : Colors.light.textSecondary}
+      />
+      <Text
+        style={[styles.tabLabel, focused && styles.tabLabelActive]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>
@@ -58,7 +59,7 @@ export default function TabLayout() {
         name="search"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="search" label="Chercher" focused={focused} />
+            <TabIcon name="search" label="Recherche" focused={focused} />
           ),
         }}
       />
@@ -82,14 +83,16 @@ export default function TabLayout() {
   );
 }
 
+const TAB_BAR_HEIGHT = 80;
+
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    height: 72,
-    borderRadius: 28,
+    bottom: 16,
+    left: 16,
+    right: 16,
+    height: TAB_BAR_HEIGHT,
+    borderRadius: 32,
     backgroundColor: Colors.light.surfaceGlass,
     borderTopWidth: 0,
     borderWidth: 1,
@@ -105,7 +108,7 @@ const styles = StyleSheet.create({
         }
       : {
           elevation: 20,
-          shadowColor: '#1A3C34',
+          shadowColor: Colors.light.primary,
           shadowOffset: { width: 0, height: 12 },
           shadowOpacity: 0.15,
           shadowRadius: 24,
@@ -114,27 +117,17 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingTop: 6,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapActive: {
-    backgroundColor: Colors.light.primaryLight,
+    gap: 3,
+    minWidth: 64,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.light.textSecondary,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
     color: Colors.light.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
