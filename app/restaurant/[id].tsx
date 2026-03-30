@@ -10,19 +10,29 @@ import {
   Platform,
   Share,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/colors';
 import { supabase } from '../../src/lib/supabase';
 import { Restaurant, Review, Profile } from '../../src/types/database';
-import { useFavorites } from '../../src/hooks/useFavorites';
+import { useFavoritesContext } from '../../src/context/FavoritesContext';
+import { MOCK_RESTAURANTS } from '../../src/data/mockRestaurants';
+import { MOCK_MENUS, MenuItem } from '../../src/data/mockMenus';
 import DetailMapSection from '../../src/components/DetailMapSection';
 import ImageCarousel from '../../src/components/ImageCarousel';
 import TagChip from '../../src/components/TagChip';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = 320;
+
+const MENU_CATEGORIES = [
+  { key: 'entree', label: 'Entrees' },
+  { key: 'plat', label: 'Plats' },
+  { key: 'dessert', label: 'Desserts' },
+  { key: 'boisson', label: 'Boissons' },
+] as const;
 
 interface ReviewWithProfile extends Review {
   profile: Pick<Profile, 'full_name' | 'avatar_url'>;
@@ -45,6 +55,45 @@ function formatPriceRange(priceRange: number): string {
   return '\u20AC'.repeat(priceRange);
 }
 
+function formatMenuPrice(price: number): string {
+  return `${price.toFixed(2).replace('.', ',')} \u20AC`;
+}
+
+function getMockReviews(restaurantId: string): ReviewWithProfile[] {
+  return [
+    {
+      id: 'rev-1',
+      user_id: 'u1',
+      restaurant_id: restaurantId,
+      rating: 5,
+      comment: 'Excellent ! Les plats sont d\u00e9licieux et le service impeccable.',
+      created_at: '2026-02-15T12:00:00Z',
+      updated_at: '2026-02-15T12:00:00Z',
+      profile: { full_name: 'Marie L.', avatar_url: null },
+    },
+    {
+      id: 'rev-2',
+      user_id: 'u2',
+      restaurant_id: restaurantId,
+      rating: 4,
+      comment: 'Tr\u00e8s bon rapport qualit\u00e9-prix. La terrasse est agr\u00e9able.',
+      created_at: '2026-03-01T18:00:00Z',
+      updated_at: '2026-03-01T18:00:00Z',
+      profile: { full_name: 'Thomas D.', avatar_url: null },
+    },
+    {
+      id: 'rev-3',
+      user_id: 'u3',
+      restaurant_id: restaurantId,
+      rating: 5,
+      comment: 'Un vrai coup de c\u0153ur. Je recommande vivement la sp\u00e9cialit\u00e9 du chef.',
+      created_at: '2026-03-10T20:00:00Z',
+      updated_at: '2026-03-10T20:00:00Z',
+      profile: { full_name: 'Sophie M.', avatar_url: null },
+    },
+  ];
+}
+
 export default function RestaurantDetailScreen() {
   const { id, distance: rawDistance } = useLocalSearchParams<{
     id: string;
@@ -53,10 +102,22 @@ export default function RestaurantDetailScreen() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [reviews, setReviews] = useState<ReviewWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { favoriteIds, toggleFavorite } = useFavoritesContext();
 
   const isFavorite = favoriteIds.has(id);
   const distance = rawDistance ? parseFloat(rawDistance) : undefined;
+
+  const menuItems = MOCK_MENUS[id] ?? [];
+  const groupedMenu = MENU_CATEGORIES.reduce<
+    Record<string, MenuItem[]>
+  >((acc, { key, label }) => {
+    const items = menuItems.filter((item: MenuItem) => item.category === key);
+    if (items.length > 0) {
+      acc[label] = items;
+    }
+    return acc;
+  }, {});
+  const hasMenu = Object.keys(groupedMenu).length > 0;
 
   useEffect(() => {
     fetchRestaurant();
@@ -70,10 +131,15 @@ export default function RestaurantDetailScreen() {
       .eq('id', id)
       .single();
 
-    if (error) {
-      Alert.alert('Erreur', 'Impossible de charger le restaurant');
-    } else if (data) {
+    if (data) {
       setRestaurant(data);
+    } else {
+      const mock = MOCK_RESTAURANTS.find((r) => r.id === id);
+      if (mock) {
+        setRestaurant(mock);
+      } else if (error) {
+        Alert.alert('Erreur', 'Impossible de charger le restaurant');
+      }
     }
     setLoading(false);
   }
@@ -86,8 +152,10 @@ export default function RestaurantDetailScreen() {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (data) {
+    if (data && data.length > 0) {
       setReviews(data as unknown as ReviewWithProfile[]);
+    } else {
+      setReviews(getMockReviews(id));
     }
   }
 
@@ -101,6 +169,13 @@ export default function RestaurantDetailScreen() {
     } catch (_error) {
       // Share dismissed or failed silently
     }
+  }
+
+  function handleReservation() {
+    Alert.alert(
+      'R\u00e9servation envoy\u00e9e !',
+      'Votre demande de r\u00e9servation a bien \u00e9t\u00e9 transmise au restaurant. Vous recevrez une confirmation prochainement.',
+    );
   }
 
   if (loading) {
@@ -274,6 +349,54 @@ export default function RestaurantDetailScreen() {
             </View>
           )}
 
+          {/* Menu Section */}
+          {hasMenu && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Menu</Text>
+              {MENU_CATEGORIES.map(({ label }) => {
+                const items = groupedMenu[label];
+                if (!items) return null;
+                return (
+                  <View key={label} style={styles.menuCategory}>
+                    <Text style={styles.menuCategoryTitle}>{label}</Text>
+                    {items.map((item) => (
+                      <View key={item.id} style={styles.menuItem}>
+                        <Image
+                          source={{ uri: item.image_url }}
+                          style={styles.menuItemImage}
+                          accessibilityLabel={item.name}
+                        />
+                        <View style={styles.menuItemContent}>
+                          <View style={styles.menuItemHeader}>
+                            <Text style={styles.menuItemName} numberOfLines={1}>
+                              {item.name}
+                            </Text>
+                            <Text style={styles.menuItemPrice}>
+                              {formatMenuPrice(item.price)}
+                            </Text>
+                          </View>
+                          <Text
+                            style={styles.menuItemDescription}
+                            numberOfLines={2}
+                          >
+                            {item.description}
+                          </Text>
+                          {item.tags && item.tags.length > 0 && (
+                            <View style={styles.menuItemTags}>
+                              {item.tags.map((tag) => (
+                                <TagChip key={tag} label={tag} size="small" />
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* Description */}
           {restaurant.description && (
             <View style={styles.section}>
@@ -406,16 +529,20 @@ export default function RestaurantDetailScreen() {
       <View style={styles.bottomCta}>
         <TouchableOpacity
           style={styles.ctaBtnMuted}
+          onPress={handleShare}
           activeOpacity={0.8}
-          accessibilityLabel="Livraison"
+          accessibilityLabel="Partager"
+          accessibilityRole="button"
         >
-          <Ionicons name="bicycle" size={20} color={Colors.light.text} />
-          <Text style={styles.ctaBtnMutedText}>Livraison</Text>
+          <Ionicons name="share-social" size={20} color={Colors.light.text} />
+          <Text style={styles.ctaBtnMutedText}>Partager</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.ctaBtnPrimary}
+          onPress={handleReservation}
           activeOpacity={0.8}
           accessibilityLabel="R\u00e9server"
+          accessibilityRole="button"
         >
           <Ionicons name="calendar" size={20} color={Colors.light.textOnPrimary} />
           <Text style={styles.ctaBtnPrimaryText}>R\u00e9server</Text>
@@ -628,6 +755,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: Colors.light.textSecondary,
+  },
+
+  /* Menu */
+  menuCategory: {
+    gap: 8,
+  },
+  menuCategoryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.light.secondary,
+    marginTop: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+    padding: 12,
+  },
+  menuItemImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: Colors.light.surfaceWarm,
+  },
+  menuItemContent: {
+    flex: 1,
+    gap: 4,
+  },
+  menuItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  menuItemName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  menuItemPrice: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.primary,
+  },
+  menuItemDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.light.textSecondary,
+  },
+  menuItemTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 2,
   },
 
   /* Info Card */
