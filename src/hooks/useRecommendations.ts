@@ -8,6 +8,7 @@ import {
 } from '@/types/database';
 import { enrichWithDistance } from '@/utils/distance';
 import { rankRestaurants } from '@/utils/recommendation';
+import { MOCK_RESTAURANTS } from '@/data/mockRestaurants';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   cuisineTypes: [],
@@ -60,12 +61,11 @@ export function useRecommendations(
       .select('*')
       .limit(50) as { data: Restaurant[] | null };
 
-    if (!restaurants) {
-      setLoading(false);
-      return;
-    }
+    const source: Restaurant[] = (restaurants && restaurants.length > 0)
+      ? restaurants
+      : MOCK_RESTAURANTS;
 
-    const withDistance = enrichWithDistance(restaurants, userLocation);
+    const withDistance = enrichWithDistance(source, userLocation);
 
     const ranked = rankRestaurants(withDistance, userPrefs);
     setRecommended(ranked.slice(0, 10));

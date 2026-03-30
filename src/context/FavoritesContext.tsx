@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -10,7 +10,7 @@ export interface FavoriteWithRestaurant {
   restaurant: Restaurant;
 }
 
-interface UseFavoritesResult {
+interface FavoritesContextType {
   favorites: FavoriteWithRestaurant[];
   favoriteIds: Set<string>;
   loading: boolean;
@@ -19,7 +19,16 @@ interface UseFavoritesResult {
   refresh: () => Promise<void>;
 }
 
-export function useFavorites(): UseFavoritesResult {
+const FavoritesContext = createContext<FavoritesContextType>({
+  favorites: [],
+  favoriteIds: new Set(),
+  loading: true,
+  refreshing: false,
+  toggleFavorite: async () => {},
+  refresh: async () => {},
+});
+
+export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<FavoriteWithRestaurant[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -27,8 +36,10 @@ export function useFavorites(): UseFavoritesResult {
 
   const fetchFavorites = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
+
     if (!user) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
@@ -42,9 +53,7 @@ export function useFavorites(): UseFavoritesResult {
     } else if (data) {
       const favs = data as unknown as FavoriteWithRestaurant[];
       setFavorites(favs);
-      setFavoriteIds(
-        new Set(data.map((f) => f.restaurant_id))
-      );
+      setFavoriteIds(new Set(data.map((f) => f.restaurant_id)));
     }
     setLoading(false);
     setRefreshing(false);
@@ -60,25 +69,20 @@ export function useFavorites(): UseFavoritesResult {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      const isFav = favoriteIds.has(restaurantId);
-
-      if (isFav) {
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(restaurantId)) {
           next.delete(restaurantId);
-          return next;
-        });
-        setFavorites((prev) => prev.filter((f) => f.restaurant.id !== restaurantId));
-      } else {
-        const restaurant = MOCK_RESTAURANTS.find((r) => r.id === restaurantId);
-        if (restaurant) {
-          setFavoriteIds((prev) => new Set(prev).add(restaurantId));
-          setFavorites((prev) => [
-            ...prev,
-            { id: `local-${restaurantId}`, restaurant },
-          ]);
+          setFavorites((f) => f.filter((fav) => fav.restaurant.id !== restaurantId));
+        } else {
+          next.add(restaurantId);
+          const restaurant = MOCK_RESTAURANTS.find((r) => r.id === restaurantId);
+          if (restaurant) {
+            setFavorites((f) => [...f, { id: `local-${Date.now()}`, restaurant }]);
+          }
         }
-      }
+        return next;
+      });
       return;
     }
 
@@ -117,5 +121,15 @@ export function useFavorites(): UseFavoritesResult {
     await fetchFavorites();
   }, [fetchFavorites]);
 
-  return { favorites, favoriteIds, loading, refreshing, toggleFavorite, refresh };
+  return (
+    <FavoritesContext.Provider
+      value={{ favorites, favoriteIds, loading, refreshing, toggleFavorite, refresh }}
+    >
+      {children}
+    </FavoritesContext.Provider>
+  );
+}
+
+export function useFavoritesContext(): FavoritesContextType {
+  return useContext(FavoritesContext);
 }
