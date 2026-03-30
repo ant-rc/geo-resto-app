@@ -18,30 +18,17 @@ import { Colors } from '../../src/constants/colors';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useRecommendations } from '../../src/hooks/useRecommendations';
 import { useFavoritesContext } from '../../src/context/FavoritesContext';
-import { RestaurantFilters } from '../../src/hooks/useRestaurants';
 import { Restaurant } from '../../src/types/database';
 import MapSection from '../../src/components/MapSection';
 import RestaurantCard from '../../src/components/RestaurantCard';
 import SectionHeader from '../../src/components/SectionHeader';
-import FilterModal from '../../src/components/FilterModal';
 import * as Location from 'expo-location';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_PEEK = Math.round(SCREEN_HEIGHT * 0.34);
 const SHEET_FULL = SCREEN_HEIGHT * 0.75;
 
-interface FilterChip {
-  key: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
-
-const FILTER_CHIPS: FilterChip[] = [
-  { key: 'open', label: 'Ouvert', icon: 'time' },
-  { key: 'vegan', label: 'Vegan', icon: 'leaf' },
-  { key: 'gluten-free', label: 'Sans gluten', icon: 'nutrition' },
-  { key: 'reservable', label: 'Reservable', icon: 'calendar' },
-];
+const QUICK_FILTERS = ['Tout', 'Vegan', 'Halal', 'Brunch', 'Terrasse'];
 
 export default function HomeScreen() {
   const { location, loading: locationLoading } = useLocation();
@@ -49,9 +36,7 @@ export default function HomeScreen() {
   const { favoriteIds, toggleFavorite } = useFavoritesContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [sheetExpanded, setSheetExpanded] = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(false);
-  const [filters, setFilters] = useState<RestaurantFilters>({});
-  const [activeChips, setActiveChips] = useState<Set<string>>(new Set(['open']));
+  const [activeFilter, setActiveFilter] = useState('Tout');
   const [cityName, setCityName] = useState('Paris');
   const [userName, setUserName] = useState('U');
   const sheetAnim = useRef(new Animated.Value(SHEET_PEEK)).current;
@@ -81,18 +66,6 @@ export default function HomeScreen() {
 
   function handleMarkerPress(restaurant: Restaurant) {
     router.push(`/restaurant/${restaurant.id}`);
-  }
-
-  function toggleChip(key: string) {
-    setActiveChips((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
   }
 
   function toggleSheet() {
@@ -182,34 +155,29 @@ export default function HomeScreen() {
           />
           <TouchableOpacity
             style={styles.filterBtn}
-            onPress={() => setFiltersVisible(true)}
+            onPress={() => router.push('/(tabs)/search')}
           >
             <Ionicons name="options-outline" size={17} color={Colors.light.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Filter chips */}
+        {/* Quick filters */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipsRow}
         >
-          {FILTER_CHIPS.map((chip) => {
-            const isActive = activeChips.has(chip.key);
+          {QUICK_FILTERS.map((label) => {
+            const isActive = activeFilter === label;
             return (
               <TouchableOpacity
-                key={chip.key}
+                key={label}
                 style={[styles.chip, isActive && styles.chipActive]}
-                onPress={() => toggleChip(chip.key)}
+                onPress={() => setActiveFilter(label)}
                 activeOpacity={0.75}
               >
-                <Ionicons
-                  name={chip.icon}
-                  size={14}
-                  color={isActive ? Colors.light.textOnPrimary : Colors.light.primary}
-                />
                 <Text style={[styles.chipLabel, isActive && styles.chipLabelActive]}>
-                  {chip.label}
+                  {label}
                 </Text>
               </TouchableOpacity>
             );
@@ -334,12 +302,6 @@ export default function HomeScreen() {
         </ScrollView>
       </Animated.View>
 
-      <FilterModal
-        visible={filtersVisible}
-        onClose={() => setFiltersVisible(false)}
-        filters={filters}
-        onApply={setFilters}
-      />
     </View>
   );
 }
