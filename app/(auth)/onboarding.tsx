@@ -14,26 +14,11 @@ import { Colors } from '../../src/constants/colors';
 import { supabase } from '../../src/lib/supabase';
 import { UserPreferences } from '../../src/types/database';
 import TagChip from '../../src/components/TagChip';
-
-const CUISINE_OPTIONS = [
-  'Français', 'Italien', 'Japonais', 'Indien', 'Mexicain',
-  'Libanais', 'Chinois', 'Thaïlandais', 'Coréen', 'Américain',
-];
-
-const DISTANCE_OPTIONS = [
-  { label: '1 km', value: 1 },
-  { label: '3 km', value: 3 },
-  { label: '5 km', value: 5 },
-  { label: '10 km', value: 10 },
-  { label: '20 km', value: 20 },
-];
-
-const PRICE_OPTIONS = [
-  { label: '$', value: 1 },
-  { label: '$$', value: 2 },
-  { label: '$$$', value: 3 },
-  { label: '$$$$', value: 4 },
-];
+import {
+  CUISINE_OPTIONS,
+  DISTANCE_OPTIONS,
+  PRICE_OPTIONS,
+} from '../../src/constants/data';
 
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
@@ -62,30 +47,22 @@ export default function OnboardingScreen() {
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
+
+    if (user) {
+      const preferences: UserPreferences = {
+        cuisineTypes: selectedCuisines,
+        priceRange: selectedPrices,
+        maxDistance: selectedDistance,
+        onboardingCompleted: true,
+      };
+
+      await supabase
+        .from('profiles')
+        .update({ preferences } as never)
+        .eq('id', user.id);
     }
 
-    const preferences: UserPreferences = {
-      cuisineTypes: selectedCuisines,
-      priceRange: selectedPrices,
-      maxDistance: selectedDistance,
-      onboardingCompleted: true,
-    };
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ preferences } as never)
-      .eq('id', user.id);
-
-    if (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder vos préférences');
-    } else {
-      router.replace('/(tabs)');
-    }
-
-    setLoading(false);
+    router.replace('/(tabs)');
   }
 
   function handleSkip() {
@@ -94,8 +71,8 @@ export default function OnboardingScreen() {
 
   const steps = [
     {
-      title: 'Vos cuisines préférées',
-      subtitle: 'Sélectionnez les types de cuisine que vous aimez',
+      title: 'Vos cuisines preferees',
+      subtitle: 'Selectionnez les types de cuisine que vous aimez',
       content: (
         <View style={styles.optionsGrid}>
           {CUISINE_OPTIONS.map((cuisine) => (
@@ -111,7 +88,7 @@ export default function OnboardingScreen() {
     },
     {
       title: 'Votre budget',
-      subtitle: 'Quelle fourchette de prix préférez-vous ?',
+      subtitle: 'Quelle fourchette de prix preferez-vous ?',
       content: (
         <View style={styles.optionsGrid}>
           {PRICE_OPTIONS.map((option) => {
@@ -142,15 +119,15 @@ export default function OnboardingScreen() {
     },
     {
       title: 'Rayon de recherche',
-      subtitle: 'À quelle distance êtes-vous prêt à aller ?',
+      subtitle: 'A quelle distance etes-vous pret a aller ?',
       content: (
         <View style={styles.optionsGrid}>
-          {DISTANCE_OPTIONS.map((option) => (
+          {DISTANCE_OPTIONS.map((distance) => (
             <TagChip
-              key={option.value}
-              label={option.label}
-              selected={selectedDistance === option.value}
-              onPress={() => setSelectedDistance(option.value)}
+              key={distance}
+              label={`${distance} km`}
+              selected={selectedDistance === distance}
+              onPress={() => setSelectedDistance(distance)}
             />
           ))}
         </View>
@@ -166,7 +143,7 @@ export default function OnboardingScreen() {
       {/* Progress */}
       <View style={styles.progressWrap}>
         <View style={styles.progressBar}>
-          {steps.map((_, i) => (
+          {steps.map((_s, i) => (
             <View
               key={i}
               style={[styles.progressDot, i <= step && styles.progressDotActive]}

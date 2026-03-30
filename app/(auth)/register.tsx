@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
@@ -35,7 +35,7 @@ export default function RegisterScreen() {
     }
 
     if (password.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caracteres');
       return;
     }
 
@@ -52,13 +52,10 @@ export default function RegisterScreen() {
 
     if (error) {
       Alert.alert('Erreur', error.message);
-    } else {
-      Alert.alert(
-        'Inscription réussie',
-        'Vérifiez votre email pour confirmer votre compte'
-      );
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    router.replace('/(auth)/onboarding');
   }
 
   return (
@@ -69,118 +66,118 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Branding */}
-        <View style={styles.header}>
-          <View style={styles.logoWrap}>
-            <Ionicons name="person-add" size={26} color={Colors.light.textOnPrimary} />
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.heroGradient}>
+            <View style={styles.logoCircle}>
+              <Ionicons name="person-add" size={30} color={Colors.light.textOnPrimary} />
+            </View>
           </View>
-          <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>
-            Rejoignez la communauté Tastly
-          </Text>
         </View>
 
-        {/* Form card */}
-        <View style={styles.card}>
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Nom complet"
-                placeholderTextColor={Colors.light.textSecondary}
-                value={fullName}
-                onChangeText={setFullName}
-              />
-            </View>
+        {/* Title */}
+        <Text style={styles.title}>Creer un compte</Text>
+        <Text style={styles.subtitle}>
+          Rejoignez la communaute Tastly
+        </Text>
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="mail-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={Colors.light.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </View>
+        {/* Form */}
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="person-outline"
+              size={18}
+              color={Colors.light.textSecondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Nom complet"
+              placeholderTextColor={Colors.light.textSecondary}
+              value={fullName}
+              onChangeText={setFullName}
+            />
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Mot de passe"
-                placeholderTextColor={Colors.light.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={Colors.light.textSecondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={Colors.light.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirmer le mot de passe"
-                placeholderTextColor={Colors.light.textSecondary}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-              />
-            </View>
-
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={Colors.light.textSecondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Mot de passe"
+              placeholderTextColor={Colors.light.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-              activeOpacity={0.85}
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Inscription...' : "S'inscrire"}
-              </Text>
-              {!loading && (
-                <Ionicons name="arrow-forward" size={17} color={Colors.light.textOnPrimary} />
-              )}
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color={Colors.light.textSecondary}
+              />
             </TouchableOpacity>
           </View>
+
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={18}
+              color={Colors.light.textSecondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirmer le mot de passe"
+              placeholderTextColor={Colors.light.textSecondary}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showPassword}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Inscription...' : "S'inscrire"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Déjà un compte ? </Text>
+          <Text style={styles.footerText}>Deja un compte ? </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
               <Text style={styles.footerLink}>Se connecter</Text>
@@ -199,26 +196,44 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
-  header: {
+
+  /* Hero */
+  hero: {
     alignItems: 'center',
-    marginBottom: 32,
+    paddingTop: Platform.OS === 'ios' ? 72 : 56,
+    marginBottom: 28,
   },
-  logoWrap: {
+  heroGradient: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  logoCircle: {
     width: 64,
     height: 64,
-    borderRadius: 20,
-    backgroundColor: Colors.light.primaryMuted,
+    borderRadius: 32,
+    backgroundColor: Colors.light.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 18,
   },
+
+  /* Title */
   title: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: Colors.light.text,
+    textAlign: 'center',
     letterSpacing: -0.5,
     marginBottom: 8,
   },
@@ -226,21 +241,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.light.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  card: {
-    backgroundColor: Colors.light.surface,
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: Colors.light.borderLight,
-  },
+
+  /* Form */
   form: {
     gap: 14,
+    marginBottom: 28,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.light.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.light.borderLight,
@@ -258,37 +271,35 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 4,
   },
-  button: {
-    flexDirection: 'row',
+  submitButton: {
     backgroundColor: Colors.light.primary,
     borderRadius: 16,
     paddingVertical: 16,
-    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 6,
+    marginTop: 4,
   },
-  buttonDisabled: {
+  submitButtonDisabled: {
     opacity: 0.5,
   },
-  buttonText: {
+  submitButtonText: {
     color: Colors.light.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
+
+  /* Footer */
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 28,
   },
   footerText: {
     color: Colors.light.textSecondary,
     fontSize: 14,
   },
   footerLink: {
-    color: Colors.light.accent,
+    color: Colors.light.primary,
     fontSize: 14,
     fontWeight: '600',
   },

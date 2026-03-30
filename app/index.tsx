@@ -1,5 +1,53 @@
 import { Redirect } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { supabase } from '../src/lib/supabase';
+import { Colors } from '../src/constants/colors';
+import { UserPreferences } from '../src/types/database';
 
 export default function Index() {
-  return <Redirect href="/(tabs)" />;
+  const [target, setTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setTarget('/(auth)/login');
+        return;
+      }
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('id', session.user.id)
+        .single() as { data: { preferences: UserPreferences | null } | null };
+
+      const prefs = data?.preferences ?? null;
+      if (!prefs?.onboardingCompleted) {
+        setTarget('/(auth)/onboarding');
+      } else {
+        setTarget('/(tabs)');
+      }
+    })();
+  }, []);
+
+  if (!target) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
+  return <Redirect href={target as '/(tabs)'} />;
 }
+
+const styles = StyleSheet.create({
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.light.background,
+  },
+});
