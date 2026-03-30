@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useRecommendations } from '../../src/hooks/useRecommendations';
-import { useFavorites } from '../../src/hooks/useFavorites';
+import { useFavoritesContext } from '../../src/context/FavoritesContext';
 import { RestaurantFilters } from '../../src/hooks/useRestaurants';
 import { Restaurant } from '../../src/types/database';
 import MapSection from '../../src/components/MapSection';
@@ -46,7 +46,7 @@ const FILTER_CHIPS: FilterChip[] = [
 export default function HomeScreen() {
   const { location, loading: locationLoading } = useLocation();
   const { recommended, nearby, topRated, loading: recsLoading } = useRecommendations(location);
-  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { favoriteIds, toggleFavorite } = useFavoritesContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [filtersVisible, setFiltersVisible] = useState(false);

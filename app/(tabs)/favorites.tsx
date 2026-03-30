@@ -11,12 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { useFavorites } from '../../src/hooks/useFavorites';
+import { useFavoritesContext } from '../../src/context/FavoritesContext';
 import { RestaurantWithDistance } from '../../src/types/database';
 import RestaurantCard from '../../src/components/RestaurantCard';
 
 export default function FavoritesScreen() {
-  const { favorites, favoriteIds, loading, refreshing, toggleFavorite, refresh } = useFavorites();
+  const { favorites, favoriteIds, loading, refreshing, toggleFavorite, refresh } = useFavoritesContext();
 
   if (loading) {
     return (

@@ -13,12 +13,12 @@ import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 import { Profile, UserPreferences } from '../../src/types/database';
-import { useFavorites } from '../../src/hooks/useFavorites';
+import { useFavoritesContext } from '../../src/context/FavoritesContext';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const { favorites } = useFavorites();
+  const { favorites } = useFavoritesContext();
 
   useEffect(() => {
     fetchProfile();
@@ -126,7 +126,7 @@ export default function ProfileScreen() {
               <Text style={styles.allergyTitle}>Mon profil culinaire</Text>
             </View>
             <TouchableOpacity
-              onPress={() => Alert.alert('A venir', 'Edition des preferences bientot disponible')}
+              onPress={() => router.push('/(auth)/onboarding')}
               activeOpacity={0.7}
             >
               <Text style={styles.allergyEditBtn}>Editer</Text>
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.activityItem}
-            onPress={() => Alert.alert('A venir', 'Les reservations arrivent bientot')}
+            onPress={() => Alert.alert('Reservations', 'Vous n\'avez aucune reservation')}
             activeOpacity={0.7}
           >
             <View style={styles.activityItemLeft}>
@@ -197,7 +197,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.activityItem}
-            onPress={() => Alert.alert('A venir', 'Les offres arrivent bientot')}
+            onPress={() => Alert.alert('Offres', 'Aucune offre disponible pour le moment')}
             activeOpacity={0.7}
           >
             <View style={styles.activityItemLeft}>
@@ -218,7 +218,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.activityItem}
-            onPress={() => Alert.alert('A venir', 'Les notifications arrivent bientot')}
+            onPress={() => Alert.alert('Notifications', 'Notifications activees')}
             activeOpacity={0.7}
           >
             <View style={styles.activityItemLeft}>
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.activityItem}
-            onPress={() => Alert.alert('A venir', 'Les parametres arrivent bientot')}
+            onPress={() => Alert.alert('Parametres', 'Parametres par defaut appliques')}
             activeOpacity={0.7}
           >
             <View style={styles.activityItemLeft}>
