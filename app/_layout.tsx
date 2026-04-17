@@ -20,6 +20,10 @@ export default function RootLayout() {
               presentation: 'card',
             }}
           />
+          <Stack.Screen
+            name="settings"
+            options={{ headerShown: false, presentation: 'card' }}
+          />
         </Stack>
       </WebContainer>
     </FavoritesProvider>
