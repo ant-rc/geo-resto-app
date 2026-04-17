@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,6 +11,8 @@ import {
   Animated,
   Dimensions,
   Platform,
+  Modal,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +24,7 @@ import { Restaurant } from '../../src/types/database';
 import MapSection from '../../src/components/MapSection';
 import RestaurantCard from '../../src/components/RestaurantCard';
 import SectionHeader from '../../src/components/SectionHeader';
+import { MOCK_RESTAURANTS } from '../../src/data/mockRestaurants';
 import * as Location from 'expo-location';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -30,16 +33,135 @@ const SHEET_FULL = SCREEN_HEIGHT * 0.75;
 
 const QUICK_FILTERS = ['Tout', 'Vegan', 'Halal', 'Brunch', 'Terrasse'];
 
+type NotificationIcon =
+  | 'pricetag'
+  | 'calendar'
+  | 'restaurant'
+  | 'diamond'
+  | 'alert-circle'
+  | 'musical-notes'
+  | 'mic'
+  | 'wine'
+  | 'sparkles';
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  icon: NotificationIcon;
+  time: string;
+  unread: boolean;
+};
+
+const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'notif-1',
+    title: 'Nouvelle offre',
+    message: '-20% chez Le Potager de Charlotte ce soir',
+    icon: 'pricetag',
+    time: 'Il y a 2h',
+    unread: true,
+  },
+  {
+    id: 'notif-2',
+    title: 'Réservation confirmée',
+    message: 'Table pour 2 le 22 avril à 20:00 chez Chez Janou',
+    icon: 'calendar',
+    time: 'Hier',
+    unread: true,
+  },
+  {
+    id: 'notif-3',
+    title: 'Nouveau restaurant',
+    message: "L'Atelier Végétal vient d'ouvrir près de chez vous",
+    icon: 'restaurant',
+    time: 'Il y a 3 jours',
+    unread: false,
+  },
+  {
+    id: 'notif-4',
+    title: 'Jam Session ce soir',
+    message: 'Le Potager de Charlotte organise une jam jazz à 21:00',
+    icon: 'musical-notes',
+    time: 'Il y a 4 heures',
+    unread: true,
+  },
+  {
+    id: 'notif-5-event',
+    title: 'Concert à venir',
+    message: 'Chez Janou : quartet acoustique samedi 27 avril à 20:00',
+    icon: 'mic',
+    time: 'Hier',
+    unread: false,
+  },
+  {
+    id: 'notif-6-event',
+    title: 'Dégustation de vins',
+    message: 'Sakura Ramen : dégustation saké-sushi jeudi 2 mai',
+    icon: 'wine',
+    time: 'Il y a 2 jours',
+    unread: false,
+  },
+  {
+    id: 'notif-5',
+    title: 'Promotion Tastly',
+    message: 'Découvrez le plan Premium gratuit 7 jours',
+    icon: 'diamond',
+    time: 'Il y a 1 semaine',
+    unread: false,
+  },
+  {
+    id: 'notif-6',
+    title: 'Restaurant fermé',
+    message: "La Trattoria Romana est fermée aujourd'hui",
+    icon: 'alert-circle',
+    time: 'Il y a 1 semaine',
+    unread: false,
+  },
+];
+
+function extractCity(address: string): string {
+  const match = address.match(/\d{5}\s+([^,]+)$/);
+  if (match && match[1]) return match[1].trim();
+  const parts = address.split(',');
+  return parts[parts.length - 1]?.trim() || '';
+}
+
+function formatPrice(priceRange: number): string {
+  return '€'.repeat(Math.max(1, Math.min(4, priceRange)));
+}
+
 export default function HomeScreen() {
   const { location, loading: locationLoading } = useLocation();
   const { recommended, nearby, topRated, loading: recsLoading } = useRecommendations(location);
   const { favoriteIds, toggleFavorite } = useFavoritesContext();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Tout');
   const [cityName, setCityName] = useState('Paris');
   const [userName, setUserName] = useState('U');
+  const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   const sheetAnim = useRef(new Animated.Value(SHEET_PEEK)).current;
+
+  const showSuggestions = searchQuery.length > 0 && searchFocused;
+
+  const suggestions = useMemo<Restaurant[]>(() => {
+    if (searchQuery.length === 0) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return MOCK_RESTAURANTS.filter((r) => {
+      const nameMatch = r.name.toLowerCase().includes(q);
+      const cuisineMatch = r.cuisine_type.some((c) => c.toLowerCase().includes(q));
+      const addressMatch = r.address.toLowerCase().includes(q);
+      return nameMatch || cuisineMatch || addressMatch;
+    }).slice(0, 5);
+  }, [searchQuery]);
+
+  function handleSuggestionPress(id: string) {
+    setSearchQuery('');
+    setSearchFocused(false);
+    router.push(`/restaurant/${id}`);
+  }
 
   const allRestaurants = nearby;
   const loading = locationLoading || recsLoading;
@@ -134,7 +256,11 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={styles.notifBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.notifBtn}
+            activeOpacity={0.7}
+            onPress={() => setNotificationsModalVisible(true)}
+          >
             <Ionicons name="notifications" size={20} color={Colors.light.text} />
             <View style={styles.notifDot} />
           </TouchableOpacity>
@@ -149,6 +275,8 @@ export default function HomeScreen() {
             placeholderTextColor={Colors.light.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onSubmitEditing={() =>
               router.push({ pathname: '/(tabs)/search', params: { q: searchQuery } })
             }
@@ -160,6 +288,53 @@ export default function HomeScreen() {
             <Ionicons name="options-outline" size={17} color={Colors.light.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* Search suggestions */}
+        {showSuggestions && (
+          <View style={styles.suggestionsWrap}>
+            {suggestions.length > 0 ? (
+              suggestions.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.suggestionItem,
+                    index < suggestions.length - 1 && styles.suggestionItemDivider,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => handleSuggestionPress(item.id)}
+                >
+                  <Image
+                    source={{ uri: item.image_url ?? undefined }}
+                    style={styles.suggestionThumb}
+                  />
+                  <View style={styles.suggestionTextBlock}>
+                    <Text style={styles.suggestionName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.suggestionMeta} numberOfLines={1}>
+                      {item.cuisine_type[0] ?? 'Restaurant'} · {formatPrice(item.price_range)} ·{' '}
+                      {extractCity(item.address)}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={16}
+                    color={Colors.light.textSecondary}
+                  />
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.suggestionEmpty}>
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color={Colors.light.textSecondary}
+                />
+                <Text style={styles.suggestionEmptyText}>Aucun résultat</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Quick filters */}
         <ScrollView
@@ -204,13 +379,13 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.sheetContent}
         >
-          {/* Recommended section — "Parfait pour vous" */}
+          {/* Recommended section - "Parfait pour vous" */}
           {recommended.length > 0 && (
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderWrap}>
                 <SectionHeader
                   title="Parfait pour vous"
-                  subtitle="Base sur vos preferences"
+                  subtitle="Basé sur vos préférences"
                   actionLabel="Voir tout"
                   onAction={() =>
                     router.push({ pathname: '/(tabs)/search', params: { filter: 'recommended' } })
@@ -273,8 +448,8 @@ export default function HomeScreen() {
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderWrap}>
                 <SectionHeader
-                  title="Les mieux notes"
-                  subtitle="Les favoris de la communaute"
+                  title="Les mieux notés"
+                  subtitle="Les favoris de la communauté"
                   actionLabel="Voir tout"
                   onAction={() =>
                     router.push({ pathname: '/(tabs)/search', params: { filter: 'top-rated' } })
@@ -301,6 +476,65 @@ export default function HomeScreen() {
           )}
         </ScrollView>
       </Animated.View>
+
+      {/* Notifications modal */}
+      <Modal
+        visible={notificationsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setNotificationsModalVisible(false)}
+      >
+        <View style={styles.notifModalContainer}>
+          <View style={styles.notifModalHeader}>
+            <TouchableOpacity
+              style={styles.notifCloseBtn}
+              onPress={() => setNotificationsModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={22} color={Colors.light.text} />
+            </TouchableOpacity>
+            <Text style={styles.notifModalTitle}>Notifications</Text>
+            <View style={styles.notifCloseBtn} />
+          </View>
+
+          {MOCK_NOTIFICATIONS.every((n) => !n.unread) &&
+          MOCK_NOTIFICATIONS.length === 0 ? (
+            <View style={styles.notifEmpty}>
+              <Ionicons
+                name="notifications-off"
+                size={40}
+                color={Colors.light.textSecondary}
+              />
+              <Text style={styles.notifEmptyText}>Aucune notification</Text>
+            </View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.notifList}
+              showsVerticalScrollIndicator={false}
+            >
+              {MOCK_NOTIFICATIONS.map((notif) => (
+                <View key={notif.id} style={styles.notifCard}>
+                  <View style={styles.notifIconWrap}>
+                    <Ionicons
+                      name={notif.icon}
+                      size={20}
+                      color={Colors.light.primary}
+                    />
+                  </View>
+                  <View style={styles.notifTextBlock}>
+                    <Text style={styles.notifTitle}>{notif.title}</Text>
+                    <Text style={styles.notifMessage} numberOfLines={2}>
+                      {notif.message}
+                    </Text>
+                    <Text style={styles.notifTime}>{notif.time}</Text>
+                  </View>
+                  {notif.unread && <View style={styles.notifUnreadDot} />}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
 
     </View>
   );
@@ -569,5 +803,168 @@ const styles = StyleSheet.create({
   horizontalList: {
     paddingHorizontal: 20,
     gap: 14,
+  },
+
+  /* ── Search suggestions ── */
+  suggestionsWrap: {
+    marginTop: 8,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 24,
+        }
+      : {
+          elevation: 14,
+          shadowColor: '#1A3C34',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.16,
+          shadowRadius: 22,
+        }),
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  suggestionItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderLight,
+  },
+  suggestionThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: Colors.light.primaryLight,
+  },
+  suggestionTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.light.text,
+    letterSpacing: -0.1,
+  },
+  suggestionMeta: {
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    letterSpacing: 0.1,
+  },
+  suggestionEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+  },
+  suggestionEmptyText: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    fontWeight: '600',
+  },
+
+  /* ── Notifications modal ── */
+  notifModalContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  notifModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 12 : 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderLight,
+  },
+  notifCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.light.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  notifModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.light.text,
+    letterSpacing: -0.3,
+  },
+  notifList: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  notifCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+  },
+  notifIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.light.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifTextBlock: {
+    flex: 1,
+    gap: 3,
+  },
+  notifTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.light.text,
+    letterSpacing: -0.2,
+  },
+  notifMessage: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+  },
+  notifTime: {
+    fontSize: 10,
+    color: Colors.light.textSecondary,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginTop: 2,
+  },
+  notifUnreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.light.accent,
+    marginTop: 6,
+  },
+  notifEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  notifEmptyText: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    fontWeight: '600',
   },
 });
