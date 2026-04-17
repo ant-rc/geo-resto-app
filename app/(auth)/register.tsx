@@ -35,7 +35,7 @@ export default function RegisterScreen() {
     }
 
     if (password.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caracteres');
+      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
       return;
     }
 
@@ -78,9 +78,9 @@ export default function RegisterScreen() {
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Creer un compte</Text>
+        <Text style={styles.title}>Créer un compte</Text>
         <Text style={styles.subtitle}>
-          Rejoignez la communaute Tastly
+          Rejoignez la communauté Tastly
         </Text>
 
         {/* Form */}
@@ -177,7 +177,7 @@ export default function RegisterScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Deja un compte ? </Text>
+          <Text style={styles.footerText}>Déjà un compte ? </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
               <Text style={styles.footerLink}>Se connecter</Text>

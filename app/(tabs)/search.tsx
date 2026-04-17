@@ -110,7 +110,7 @@ export default function SearchScreen() {
   function renderFilters() {
     return (
       <View style={styles.filtersContainer}>
-        {/* Cuisine Type — horizontal scroll, compact */}
+        {/* Cuisine Type - horizontal scroll, compact */}
         <View style={styles.filterSection}>
           <View style={styles.filterHeader}>
             <Text style={styles.filterTitle}>Cuisine</Text>
@@ -139,7 +139,7 @@ export default function SearchScreen() {
           </ScrollView>
         </View>
 
-        {/* Price + Distance — side by side */}
+        {/* Price + Distance - side by side */}
         <View style={styles.filterRow}>
           <View style={styles.filterHalf}>
             <Text style={styles.filterTitle}>Prix</Text>
@@ -183,7 +183,7 @@ export default function SearchScreen() {
           </View>
         </View>
 
-        {/* Tags — horizontal scroll */}
+        {/* Tags - horizontal scroll */}
         <View style={styles.filterSection}>
           <Text style={styles.filterTitle}>Tags</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
@@ -267,7 +267,7 @@ export default function SearchScreen() {
               {restaurants.length > 0 && (
                 <Text style={styles.resultsCount}>
                   <Text style={styles.resultsCountBold}>{restaurants.length}</Text>
-                  {' resultats'}
+                  {' résultats'}
                 </Text>
               )}
             </View>
@@ -275,7 +275,7 @@ export default function SearchScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={40} color={Colors.light.border} />
-              <Text style={styles.emptyText}>Aucun resultat</Text>
+              <Text style={styles.emptyText}>Aucun résultat</Text>
             </View>
           }
         />
@@ -295,7 +295,7 @@ export default function SearchScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.showResultsBtn} activeOpacity={0.85}>
           <Text style={styles.showResultsText}>
-            {loading ? 'Recherche...' : `Afficher ${restaurants.length} resultats`}
+            {loading ? 'Recherche...' : `Afficher ${restaurants.length} résultats`}
           </Text>
         </TouchableOpacity>
       </View>

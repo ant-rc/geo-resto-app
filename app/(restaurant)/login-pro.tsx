@@ -24,7 +24,7 @@ interface ArgumentBlock {
 const ARGUMENTS: ArgumentBlock[] = [
   {
     icon: 'eye-outline',
-    title: 'Visibilite',
+    title: 'Visibilité',
     description: 'Soyez visible par des milliers d\u2019utilisateurs',
   },
   {
@@ -54,7 +54,7 @@ const PLANS: PricingPlan[] = [
     name: 'Gratuit',
     features: [
       { text: 'Fiche restaurant basique' },
-      { text: 'Visibilite standard' },
+      { text: 'Visibilité standard' },
     ],
     popular: false,
   },
@@ -243,7 +243,7 @@ export default function LoginProScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Connexion...' : 'Acceder a mon espace'}
+                {loading ? 'Connexion...' : 'Accéder à mon espace'}
               </Text>
               {!loading && (
                 <Ionicons name="arrow-forward" size={17} color={Colors.light.textOnPrimary} />
@@ -256,11 +256,11 @@ export default function LoginProScreen() {
         <View style={styles.footer}>
           <TouchableOpacity activeOpacity={0.7}>
             <Text style={styles.footerLink}>
-              Pas encore partenaire ? Creer un compte
+              Pas encore partenaire ? Créer un compte
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-            <Text style={styles.footerBack}>Retour a l'app</Text>
+            <Text style={styles.footerBack}>Retour à l'app</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

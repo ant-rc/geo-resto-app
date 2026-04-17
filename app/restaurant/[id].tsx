@@ -28,7 +28,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = 320;
 
 const MENU_CATEGORIES = [
-  { key: 'entree', label: 'Entrees' },
+  { key: 'entree', label: 'Entrées' },
   { key: 'plat', label: 'Plats' },
   { key: 'dessert', label: 'Desserts' },
   { key: 'boisson', label: 'Boissons' },
@@ -272,7 +272,7 @@ export default function RestaurantDetailScreen() {
           </View>
         </View>
 
-        {/* Content — overlaps hero with rounded top */}
+        {/* Content - overlaps hero with rounded top */}
         <View style={styles.content}>
           {/* Title + Rating badge */}
           <View style={styles.titleRow}>
@@ -541,11 +541,11 @@ export default function RestaurantDetailScreen() {
           style={styles.ctaBtnPrimary}
           onPress={handleReservation}
           activeOpacity={0.8}
-          accessibilityLabel="R\u00e9server"
+          accessibilityLabel="Réserver"
           accessibilityRole="button"
         >
           <Ionicons name="calendar" size={20} color={Colors.light.textOnPrimary} />
-          <Text style={styles.ctaBtnPrimaryText}>R\u00e9server</Text>
+          <Text style={styles.ctaBtnPrimaryText}>Réserver</Text>
         </TouchableOpacity>
       </View>
     </View>

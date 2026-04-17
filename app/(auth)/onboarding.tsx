@@ -71,8 +71,8 @@ export default function OnboardingScreen() {
 
   const steps = [
     {
-      title: 'Vos cuisines preferees',
-      subtitle: 'Selectionnez les types de cuisine que vous aimez',
+      title: 'Vos cuisines préférées',
+      subtitle: 'Sélectionnez les types de cuisine que vous aimez',
       content: (
         <View style={styles.optionsGrid}>
           {CUISINE_OPTIONS.map((cuisine) => (
@@ -88,7 +88,7 @@ export default function OnboardingScreen() {
     },
     {
       title: 'Votre budget',
-      subtitle: 'Quelle fourchette de prix preferez-vous ?',
+      subtitle: 'Quelle fourchette de prix préférez-vous ?',
       content: (
         <View style={styles.optionsGrid}>
           {PRICE_OPTIONS.map((option) => {
@@ -119,7 +119,7 @@ export default function OnboardingScreen() {
     },
     {
       title: 'Rayon de recherche',
-      subtitle: 'A quelle distance etes-vous pret a aller ?',
+      subtitle: 'À quelle distance êtes-vous prêt à aller ?',
       content: (
         <View style={styles.optionsGrid}>
           {DISTANCE_OPTIONS.map((distance) => (

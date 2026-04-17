@@ -128,7 +128,7 @@ function StandardVariant({
         {/* Gradient overlay */}
         <View style={stdStyles.imageGradient} />
 
-        {/* Rating badge — bottom-left */}
+        {/* Rating badge - bottom-left */}
         {restaurant.rating != null && (
           <View style={stdStyles.ratingOverlay}>
             <Ionicons name="star" size={11} color={Colors.light.warning} />
@@ -138,7 +138,7 @@ function StandardVariant({
           </View>
         )}
 
-        {/* Distance badge — bottom-right */}
+        {/* Distance badge - bottom-right */}
         {restaurant.distance > 0 && (
           <View style={stdStyles.distanceBadge}>
             <Ionicons name="location" size={10} color={Colors.light.textOnPrimary} />
@@ -148,7 +148,7 @@ function StandardVariant({
           </View>
         )}
 
-        {/* Heart button — top-right */}
+        {/* Heart button - top-right */}
         {onFavoriteToggle && (
           <TouchableOpacity style={stdStyles.heartBtn} onPress={onFavoriteToggle}>
             <Ionicons
@@ -205,7 +205,7 @@ function WideVariant({
         {/* Gradient overlay */}
         <View style={wideStyles.imageGradient} />
 
-        {/* Rating badge — bottom-left */}
+        {/* Rating badge - bottom-left */}
         {restaurant.rating != null && (
           <View style={wideStyles.ratingOverlay}>
             <Ionicons name="star" size={12} color={Colors.light.warning} />
