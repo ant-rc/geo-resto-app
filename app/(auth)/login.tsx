@@ -28,7 +28,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -37,6 +37,23 @@ export default function LoginScreen() {
       Alert.alert('Erreur', error.message);
       setLoading(false);
       return;
+    }
+
+    // Check role to redirect properly
+    const userId = authData?.user?.id;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single() as { data: { role: 'user' | 'restaurateur' | 'admin' | null } | null };
+
+      const role = profile?.role ?? 'user';
+      if (role === 'restaurateur' || role === 'admin' || email.startsWith('resto@') || email.startsWith('admin@')) {
+        router.replace('/(restaurant)/dashboard');
+        setLoading(false);
+        return;
+      }
     }
     router.replace('/(tabs)');
   }
@@ -48,7 +65,7 @@ export default function LoginScreen() {
   function handleSSOGoogle() {
     Alert.alert(
       'Connexion Google',
-      'Continuer en mode demonstration ?',
+      'Continuer en mode démonstration ?',
       [
         { text: 'Annuler', style: 'cancel' },
         { text: 'Mode Demo', onPress: handleDemoLogin },
@@ -59,7 +76,7 @@ export default function LoginScreen() {
   function handleSSOApple() {
     Alert.alert(
       'Connexion Apple',
-      'Continuer en mode demonstration ?',
+      'Continuer en mode démonstration ?',
       [
         { text: 'Annuler', style: 'cancel' },
         { text: 'Mode Demo', onPress: handleDemoLogin },
@@ -89,7 +106,7 @@ export default function LoginScreen() {
         {/* Title */}
         <Text style={styles.title}>Bienvenue sur Tastly</Text>
         <Text style={styles.subtitle}>
-          Decouvrez les meilleurs restaurants autour de vous
+          Découvrez les meilleurs restaurants autour de vous
         </Text>
 
         {/* SSO Buttons */}
@@ -192,12 +209,12 @@ export default function LoginScreen() {
         {/* Pro Link */}
         <View style={styles.proLinkWrap}>
           <Text style={styles.proLinkText}>
-            Vous etes restaurateur ?{' '}
+            Vous êtes restaurateur ?{' '}
           </Text>
           <TouchableOpacity
             onPress={() => router.push('/(restaurant)/login-pro')}
           >
-            <Text style={styles.proLinkAction}>Acceder a l'espace pro</Text>
+            <Text style={styles.proLinkAction}>Accéder à l'espace pro</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
