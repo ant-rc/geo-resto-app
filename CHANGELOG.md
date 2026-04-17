@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.3.0](https://github.com/ant-rc/geo-resto-app/compare/v1.2.0...v1.3.0) (2026-04-17)
+
+
+### Features
+
+* **api:** add 10 mock restaurants and profile role field ([7245bc6](https://github.com/ant-rc/geo-resto-app/commit/7245bc673217c012ac2577a66d40393e7b637b1b))
+* **customer:** add live search suggestions and notifications modal ([77bb160](https://github.com/ant-rc/geo-resto-app/commit/77bb160add3aab05242911eb6a589b306726b3f5))
+* **dashboard:** redesign owner dashboard with plans and forms ([058b129](https://github.com/ant-rc/geo-resto-app/commit/058b12921e311c27ce4578b673b176c409139a18))
+* **users:** add settings page, reservations and review modals ([f31e4a0](https://github.com/ant-rc/geo-resto-app/commit/f31e4a0edbf42f1ecb434ffb5668d2c13af7bb82))
+
+
+### Bug Fixes
+
+* **auth:** redirect to login after logout ([12321de](https://github.com/ant-rc/geo-resto-app/commit/12321dee658907acfdada63c712b7a78318afd9e))
+* **auth:** route user by role to restaurateur or customer space ([fc4285a](https://github.com/ant-rc/geo-resto-app/commit/fc4285a605d31354dc3e2d8ed895c883ac1e907b))
+
 ## [1.2.0](https://github.com/ant-rc/geo-resto-app/compare/v1.1.0...v1.2.0) (2026-03-30)
 
 
