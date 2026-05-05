@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
-import { supabase } from '@/lib/supabase';
 import { Coordinates, Restaurant, RestaurantWithDistance } from '@/types/database';
 import { enrichWithDistance } from '@/utils/distance';
-import { MOCK_RESTAURANTS } from '@/data/mockRestaurants';
+import { getRestaurantsNear } from '@/lib/restaurantsService';
 
 export interface RestaurantFilters {
   searchQuery?: string;
@@ -30,8 +28,11 @@ function applyClientFilters(
 
   if (filters.searchQuery) {
     const query = filters.searchQuery.toLowerCase();
-    filtered = filtered.filter((r) =>
-      r.name.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      (r) =>
+        r.name.toLowerCase().includes(query) ||
+        r.cuisine_type.some((c) => c.toLowerCase().includes(query)) ||
+        r.address.toLowerCase().includes(query),
     );
   }
 
@@ -60,34 +61,9 @@ export function useRestaurants(filters: RestaurantFilters = {}): UseRestaurantsR
 
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from('restaurants').select('*');
 
-    if (filters.searchQuery) {
-      query = query.ilike('name', `%${filters.searchQuery}%`);
-    }
-
-    if (filters.cuisineType) {
-      query = query.contains('cuisine_type', [filters.cuisineType]);
-    }
-
-    if (filters.tags && filters.tags.length > 0) {
-      query = query.overlaps('tags', filters.tags);
-    }
-
-    if (filters.minRating) {
-      query = query.gte('rating', filters.minRating);
-    }
-
-    const { data, error } = await query.limit(50) as unknown as { data: Restaurant[] | null; error: Error | null };
-
-    if (error) {
-      Alert.alert('Erreur', 'Impossible de charger les restaurants');
-    }
-
-    const useMocks = !data || data.length === 0;
-    const source: Restaurant[] = useMocks
-      ? applyClientFilters(MOCK_RESTAURANTS, filters)
-      : data;
+    const raw = await getRestaurantsNear(filters.userLocation ?? null);
+    const source = applyClientFilters(raw, filters);
 
     let results: RestaurantWithDistance[];
 

@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   Coordinates,
-  Restaurant,
   RestaurantWithDistance,
   UserPreferences,
 } from '@/types/database';
 import { enrichWithDistance } from '@/utils/distance';
 import { rankRestaurants } from '@/utils/recommendation';
-import { MOCK_RESTAURANTS } from '@/data/mockRestaurants';
+import { getRestaurantsNear } from '@/lib/restaurantsService';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   cuisineTypes: [],
@@ -56,15 +55,7 @@ export function useRecommendations(
 
     setPreferences(userPrefs);
 
-    const { data: restaurants } = await supabase
-      .from('restaurants')
-      .select('*')
-      .limit(50) as { data: Restaurant[] | null };
-
-    const source: Restaurant[] = (restaurants && restaurants.length > 0)
-      ? restaurants
-      : MOCK_RESTAURANTS;
-
+    const source = await getRestaurantsNear(userLocation);
     const withDistance = enrichWithDistance(source, userLocation);
 
     const ranked = rankRestaurants(withDistance, userPrefs);

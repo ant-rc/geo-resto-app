@@ -18,7 +18,7 @@ import { Colors } from '../../src/constants/colors';
 import { supabase } from '../../src/lib/supabase';
 import { Restaurant, Review, Profile } from '../../src/types/database';
 import { useFavoritesContext } from '../../src/context/FavoritesContext';
-import { MOCK_RESTAURANTS } from '../../src/data/mockRestaurants';
+import { getRestaurantById } from '../../src/lib/restaurantsService';
 import { MOCK_MENUS, MenuItem } from '../../src/data/mockMenus';
 import DetailMapSection from '../../src/components/DetailMapSection';
 import ImageCarousel from '../../src/components/ImageCarousel';
@@ -125,21 +125,11 @@ export default function RestaurantDetailScreen() {
   }, [id]);
 
   async function fetchRestaurant() {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (data) {
-      setRestaurant(data);
+    const found = await getRestaurantById(id as string);
+    if (found) {
+      setRestaurant(found);
     } else {
-      const mock = MOCK_RESTAURANTS.find((r) => r.id === id);
-      if (mock) {
-        setRestaurant(mock);
-      } else if (error) {
-        Alert.alert('Erreur', 'Impossible de charger le restaurant');
-      }
+      Alert.alert('Erreur', 'Impossible de charger le restaurant');
     }
     setLoading(false);
   }

@@ -24,7 +24,6 @@ import { Restaurant } from '../../src/types/database';
 import MapSection from '../../src/components/MapSection';
 import RestaurantCard from '../../src/components/RestaurantCard';
 import SectionHeader from '../../src/components/SectionHeader';
-import { MOCK_RESTAURANTS } from '../../src/data/mockRestaurants';
 import * as Location from 'expo-location';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -149,13 +148,13 @@ export default function HomeScreen() {
   const suggestions = useMemo<Restaurant[]>(() => {
     if (searchQuery.length === 0) return [];
     const q = searchQuery.toLowerCase().trim();
-    return MOCK_RESTAURANTS.filter((r) => {
+    return nearby.filter((r) => {
       const nameMatch = r.name.toLowerCase().includes(q);
       const cuisineMatch = r.cuisine_type.some((c) => c.toLowerCase().includes(q));
       const addressMatch = r.address.toLowerCase().includes(q);
       return nameMatch || cuisineMatch || addressMatch;
     }).slice(0, 5);
-  }, [searchQuery]);
+  }, [searchQuery, nearby]);
 
   function handleSuggestionPress(id: string) {
     setSearchQuery('');
