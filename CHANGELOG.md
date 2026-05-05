@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.4.0](https://github.com/ant-rc/geo-resto-app/compare/v1.3.0...v1.4.0) (2026-05-05)
+
+
+### Features
+
+* **api:** integrate google places api with 24h cache ([d303515](https://github.com/ant-rc/geo-resto-app/commit/d303515b76a943bafbb6785dde9e12ae5d2ebf26))
+
 ## [1.3.0](https://github.com/ant-rc/geo-resto-app/compare/v1.2.0...v1.3.0) (2026-04-17)
 
 
