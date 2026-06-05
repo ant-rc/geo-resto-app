@@ -1,14 +1,15 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Favorite, Restaurant } from '@/types/database';
 import { MOCK_RESTAURANTS } from '@/data/mockRestaurants';
+import {
+  FavoriteWithRestaurant,
+  mapFavoriteRows,
+  mapFavoriteRow,
+} from '@/lib/mappers/favorites';
 
-export interface FavoriteWithRestaurant {
-  id: string;
-  restaurant: Restaurant;
-}
+export type { FavoriteWithRestaurant };
 
 interface FavoritesContextType {
   favorites: FavoriteWithRestaurant[];
@@ -33,6 +34,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const pendingToggles = useRef<Set<string>>(new Set());
 
   const fetchFavorites = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -46,14 +48,14 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from('favorites')
       .select('id, restaurant_id, restaurant:restaurants (*)')
-      .eq('user_id', user.id) as unknown as { data: (Favorite & { restaurant: Restaurant })[] | null; error: Error | null };
+      .eq('user_id', user.id);
 
     if (error) {
       Alert.alert('Erreur', 'Impossible de charger les favoris');
     } else if (data) {
-      const favs = data as unknown as FavoriteWithRestaurant[];
+      const favs = mapFavoriteRows(data);
       setFavorites(favs);
-      setFavoriteIds(new Set(data.map((f) => f.restaurant_id)));
+      setFavoriteIds(new Set(favs.map((f) => f.restaurant.id)));
     }
     setLoading(false);
     setRefreshing(false);
@@ -66,53 +68,63 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleFavorite = useCallback(async (restaurantId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(restaurantId)) {
-          next.delete(restaurantId);
-          setFavorites((f) => f.filter((fav) => fav.restaurant.id !== restaurantId));
-        } else {
-          next.add(restaurantId);
-          const restaurant = MOCK_RESTAURANTS.find((r) => r.id === restaurantId);
-          if (restaurant) {
-            setFavorites((f) => [...f, { id: `local-${Date.now()}`, restaurant }]);
-          }
-        }
-        return next;
-      });
+    // Prevent inconsistent state from rapid double-taps on the same restaurant.
+    if (pendingToggles.current.has(restaurantId)) {
       return;
     }
+    pendingToggles.current.add(restaurantId);
 
-    const isFav = favoriteIds.has(restaurantId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (isFav) {
-      await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('restaurant_id', restaurantId);
-
-      setFavorites((prev) => prev.filter((f) => f.restaurant.id !== restaurantId));
-      setFavoriteIds((prev) => {
-        const next = new Set(prev);
-        next.delete(restaurantId);
-        return next;
-      });
-    } else {
-      const { data } = await supabase
-        .from('favorites')
-        .insert({ user_id: user.id, restaurant_id: restaurantId } as never)
-        .select('id, restaurant_id, restaurant:restaurants (*)')
-        .single();
-
-      if (data) {
-        const fav = data as unknown as FavoriteWithRestaurant;
-        setFavorites((prev) => [...prev, fav]);
-        setFavoriteIds((prev) => new Set(prev).add(restaurantId));
+      if (!user) {
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(restaurantId)) {
+            next.delete(restaurantId);
+            setFavorites((f) => f.filter((fav) => fav.restaurant.id !== restaurantId));
+          } else {
+            next.add(restaurantId);
+            const restaurant = MOCK_RESTAURANTS.find((r) => r.id === restaurantId);
+            if (restaurant) {
+              setFavorites((f) => [...f, { id: `local-${restaurantId}`, restaurant }]);
+            }
+          }
+          return next;
+        });
+        return;
       }
+
+      const isFav = favoriteIds.has(restaurantId);
+
+      if (isFav) {
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('restaurant_id', restaurantId);
+
+        setFavorites((prev) => prev.filter((f) => f.restaurant.id !== restaurantId));
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(restaurantId);
+          return next;
+        });
+      } else {
+        const { data } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, restaurant_id: restaurantId } as never)
+          .select('id, restaurant_id, restaurant:restaurants (*)')
+          .single();
+
+        const fav = mapFavoriteRow(data);
+        if (fav) {
+          setFavorites((prev) => [...prev, fav]);
+          setFavoriteIds((prev) => new Set(prev).add(restaurantId));
+        }
+      }
+    } finally {
+      pendingToggles.current.delete(restaurantId);
     }
   }, [favoriteIds]);
 
