@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,28 +36,36 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+    if (!PASSWORD_REGEX.test(password)) {
+      Alert.alert(
+        'Mot de passe trop faible',
+        'Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.'
+      );
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      Alert.alert('Erreur', error.message);
+      if (error) {
+        Alert.alert('Erreur', error.message);
+        return;
+      }
+      router.replace('/(auth)/onboarding');
+    } catch (_error) {
+      Alert.alert('Erreur', 'Inscription impossible. Vérifiez votre connexion internet et réessayez.');
+    } finally {
       setLoading(false);
-      return;
     }
-    router.replace('/(auth)/onboarding');
   }
 
   return (
@@ -98,6 +108,9 @@ export default function RegisterScreen() {
               placeholderTextColor={Colors.light.textSecondary}
               value={fullName}
               onChangeText={setFullName}
+              accessibilityLabel="Nom complet"
+              textContentType="name"
+              autoComplete="name"
             />
           </View>
 
@@ -116,6 +129,9 @@ export default function RegisterScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              accessibilityLabel="Email"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
           </View>
 
@@ -133,10 +149,15 @@ export default function RegisterScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              accessibilityLabel="Mot de passe"
+              textContentType="newPassword"
+              autoComplete="new-password"
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -160,6 +181,9 @@ export default function RegisterScreen() {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
+              accessibilityLabel="Confirmer le mot de passe"
+              textContentType="newPassword"
+              autoComplete="new-password"
             />
           </View>
 
@@ -168,6 +192,9 @@ export default function RegisterScreen() {
             onPress={handleRegister}
             disabled={loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="S'inscrire"
+            accessibilityState={{ disabled: loading, busy: loading }}
           >
             <Text style={styles.submitButtonText}>
               {loading ? 'Inscription...' : "S'inscrire"}

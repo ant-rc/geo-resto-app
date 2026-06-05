@@ -28,34 +28,38 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      Alert.alert('Erreur', error.message);
-      setLoading(false);
-      return;
-    }
-
-    // Check role to redirect properly
-    const userId = authData?.user?.id;
-    if (userId) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single() as { data: { role: 'user' | 'restaurateur' | 'admin' | null } | null };
-
-      const role = profile?.role ?? 'user';
-      if (role === 'restaurateur' || role === 'admin' || email.startsWith('resto@') || email.startsWith('admin@')) {
-        router.replace('/(restaurant)/dashboard');
-        setLoading(false);
+      if (error) {
+        Alert.alert('Erreur', error.message);
         return;
       }
+
+      // Check role to redirect properly
+      const userId = authData?.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single() as { data: { role: 'user' | 'restaurateur' | 'admin' | null } | null };
+
+        const role = profile?.role ?? 'user';
+        if (role === 'restaurateur' || role === 'admin' || email.startsWith('resto@') || email.startsWith('admin@')) {
+          router.replace('/(restaurant)/dashboard');
+          return;
+        }
+      }
+      router.replace('/(tabs)');
+    } catch (_error) {
+      Alert.alert('Erreur', 'Connexion impossible. Vérifiez votre connexion internet et réessayez.');
+    } finally {
+      setLoading(false);
     }
-    router.replace('/(tabs)');
   }
 
   function handleDemoLogin() {
@@ -115,6 +119,8 @@ export default function LoginScreen() {
             style={styles.ssoButtonGoogle}
             onPress={handleSSOGoogle}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Continuer avec Google"
           >
             <Ionicons name="logo-google" size={20} color={Colors.light.text} />
             <Text style={styles.ssoButtonGoogleText}>Continuer avec Google</Text>
@@ -124,6 +130,8 @@ export default function LoginScreen() {
             style={styles.ssoButtonApple}
             onPress={handleSSOApple}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Continuer avec Apple"
           >
             <Ionicons name="logo-apple" size={20} color={Colors.light.textOnPrimary} />
             <Text style={styles.ssoButtonAppleText}>Continuer avec Apple</Text>
@@ -154,6 +162,9 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              accessibilityLabel="Email"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
           </View>
 
@@ -171,10 +182,15 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              accessibilityLabel="Mot de passe"
+              textContentType="password"
+              autoComplete="current-password"
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -189,6 +205,9 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Se connecter"
+            accessibilityState={{ disabled: loading, busy: loading }}
           >
             <Text style={styles.submitButtonText}>
               {loading ? 'Connexion...' : 'Se connecter'}
