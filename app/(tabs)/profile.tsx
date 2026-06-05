@@ -14,7 +14,7 @@ import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 import { Profile, UserPreferences } from '../../src/types/database';
 import { useFavoritesContext } from '../../src/context/FavoritesContext';
-import { Reservation, ThumbValue } from '../../src/components/profile/profileData';
+import { Reservation, ThumbValue, MOCK_RESERVATIONS } from '../../src/components/profile/profileData';
 import ReservationsModal from '../../src/components/profile/ReservationsModal';
 import ReviewModal from '../../src/components/profile/ReviewModal';
 import NotificationsModal from '../../src/components/profile/NotificationsModal';
@@ -62,24 +62,28 @@ export default function ProfileScreen() {
   }, []);
 
   async function fetchProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
+      if (error && error.code !== 'PGRST116') {
+        Alert.alert('Erreur', 'Impossible de charger le profil');
+      } else if (data) {
+        setProfile(data);
+      }
+    } catch (_error) {
       Alert.alert('Erreur', 'Impossible de charger le profil');
-    } else if (data) {
-      setProfile(data);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleLogout() {
@@ -104,6 +108,8 @@ export default function ProfileScreen() {
   const userName = profile?.full_name || 'Utilisateur';
   const userInitial = userName.charAt(0).toUpperCase();
   const favoritesCount = favorites.length;
+  const reservationsCount = MOCK_RESERVATIONS.length;
+  const reviewsCount = reviewedIds.size;
   const cuisineTypes = prefs?.cuisineTypes ?? [];
 
   if (loading) {
@@ -124,7 +130,13 @@ export default function ProfileScreen() {
               <Text style={styles.avatarInitial}>{userInitial}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.cameraBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.cameraBtn}
+            activeOpacity={0.8}
+            onPress={() => Alert.alert('Photo de profil', 'Le changement de photo arrive bientôt.')}
+            accessibilityRole="button"
+            accessibilityLabel="Changer la photo de profil"
+          >
             <Ionicons name="camera" size={14} color={Colors.light.textOnPrimary} />
           </TouchableOpacity>
         </View>
@@ -137,7 +149,7 @@ export default function ProfileScreen() {
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{reservationsCount}</Text>
             <Text style={styles.statLabel}>RÉSERVATIONS</Text>
           </View>
           <View style={styles.statDivider} />
@@ -147,7 +159,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{reviewsCount}</Text>
             <Text style={styles.statLabel}>AVIS</Text>
           </View>
         </View>
@@ -166,6 +178,8 @@ export default function ProfileScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(auth)/onboarding')}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Éditer mon profil culinaire"
             >
               <Text style={styles.allergyEditBtn}>Éditer</Text>
             </TouchableOpacity>
@@ -201,6 +215,8 @@ export default function ProfileScreen() {
             style={styles.activityItem}
             onPress={() => router.push('/(tabs)/favorites')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Mes favoris"
           >
             <View style={styles.activityItemLeft}>
               <View style={styles.activityIconPrimary}>
@@ -218,6 +234,8 @@ export default function ProfileScreen() {
             style={styles.activityItem}
             onPress={() => setReservationsModalVisible(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Mes réservations"
           >
             <View style={styles.activityItemLeft}>
               <View style={styles.activityIconPrimary}>
@@ -237,6 +255,8 @@ export default function ProfileScreen() {
             style={styles.activityItem}
             onPress={() => Alert.alert('Offres', 'Aucune offre disponible pour le moment')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Offres et codes promo"
           >
             <View style={styles.activityItemLeft}>
               <View style={styles.activityIconPrimary}>
@@ -258,6 +278,8 @@ export default function ProfileScreen() {
             style={styles.activityItem}
             onPress={() => setNotificationsModalVisible(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
           >
             <View style={styles.activityItemLeft}>
               <View style={styles.activityIconMuted}>
@@ -274,6 +296,8 @@ export default function ProfileScreen() {
             style={styles.activityItem}
             onPress={() => router.push('/settings')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Paramètres"
           >
             <View style={styles.activityItemLeft}>
               <View style={styles.activityIconMuted}>
@@ -292,6 +316,8 @@ export default function ProfileScreen() {
           style={styles.signOutBtn}
           onPress={handleLogout}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Déconnexion"
         >
           <Ionicons name="log-out-outline" size={22} color={Colors.light.error} />
           <Text style={styles.signOutText}>Déconnexion</Text>
