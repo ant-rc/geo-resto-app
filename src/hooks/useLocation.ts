@@ -23,20 +23,25 @@ export function useLocation(): UseLocationResult {
     setLoading(true);
     setError(null);
 
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setError('Permission de localisation refusée');
-      setLocation(DEFAULT_LOCATION);
-      setLoading(false);
-      return;
-    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permission de localisation refusée');
+        setLocation(DEFAULT_LOCATION);
+        return;
+      }
 
-    const loc = await Location.getCurrentPositionAsync({});
-    setLocation({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-    });
-    setLoading(false);
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+    } catch (_error) {
+      setError('Position indisponible');
+      setLocation(DEFAULT_LOCATION);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

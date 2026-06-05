@@ -135,16 +135,20 @@ export default function RestaurantDetailScreen() {
   }
 
   async function fetchReviews() {
-    const { data } = await supabase
-      .from('reviews')
-      .select('*, profile:profiles (full_name, avatar_url)')
-      .eq('restaurant_id', id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+    try {
+      const { data } = await supabase
+        .from('reviews')
+        .select('*, profile:profiles (full_name, avatar_url)')
+        .eq('restaurant_id', id)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-    if (data && data.length > 0) {
-      setReviews(data as unknown as ReviewWithProfile[]);
-    } else {
+      if (data && data.length > 0) {
+        setReviews(data as unknown as ReviewWithProfile[]);
+      } else {
+        setReviews(getMockReviews(id));
+      }
+    } catch (_error) {
       setReviews(getMockReviews(id));
     }
   }
