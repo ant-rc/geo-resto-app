@@ -1,7 +1,17 @@
+import { forwardRef, useImperativeHandle } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { Restaurant } from '../types/database';
+
+export interface MapSectionRef {
+  recenterTo: (region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  }) => void;
+}
 
 interface MapSectionProps {
   restaurants: Restaurant[];
@@ -14,25 +24,36 @@ interface MapSectionProps {
   onMarkerPress?: (restaurant: Restaurant) => void;
 }
 
-export default function MapSection({ restaurants }: MapSectionProps) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="compass" size={32} color={Colors.light.primary} />
-        </View>
-        <Text style={styles.title}>Carte interactive</Text>
-        <Text style={styles.subtitle}>
-          Disponible sur l'application mobile
-        </Text>
-        <View style={styles.badge}>
-          <Ionicons name="restaurant-outline" size={13} color={Colors.light.primary} />
-          <Text style={styles.badgeText}>{restaurants.length} restaurants</Text>
+const MapSection = forwardRef<MapSectionRef, MapSectionProps>(
+  ({ restaurants }, ref) => {
+    useImperativeHandle(ref, () => ({
+      recenterTo: () => {
+        // Web placeholder — no-op
+      },
+    }));
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="compass" size={32} color={Colors.light.primary} />
+          </View>
+          <Text style={styles.title}>Carte interactive</Text>
+          <Text style={styles.subtitle}>
+            Disponible sur l'application mobile
+          </Text>
+          <View style={styles.badge}>
+            <Ionicons name="restaurant-outline" size={13} color={Colors.light.primary} />
+            <Text style={styles.badgeText}>{restaurants.length} restaurants</Text>
+          </View>
         </View>
       </View>
-    </View>
-  );
-}
+    );
+  },
+);
+
+MapSection.displayName = 'MapSection';
+export default MapSection;
 
 const styles = StyleSheet.create({
   container: {

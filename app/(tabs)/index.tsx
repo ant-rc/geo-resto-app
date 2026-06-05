@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,17 +20,35 @@ import { Colors } from '../../src/constants/colors';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useRecommendations } from '../../src/hooks/useRecommendations';
 import { useFavoritesContext } from '../../src/context/FavoritesContext';
-import { Restaurant } from '../../src/types/database';
-import MapSection from '../../src/components/MapSection';
+import { Coordinates, Restaurant, RestaurantWithDistance } from '../../src/types/database';
+import MapSection, { MapSectionRef } from '../../src/components/MapSection';
 import RestaurantCard from '../../src/components/RestaurantCard';
 import SectionHeader from '../../src/components/SectionHeader';
 import * as Location from 'expo-location';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_PEEK = Math.round(SCREEN_HEIGHT * 0.34);
-const SHEET_FULL = SCREEN_HEIGHT * 0.75;
+const SHEET_PEEK = Math.round(SCREEN_HEIGHT * 0.45);
+const SHEET_FULL = SCREEN_HEIGHT * 0.78;
 
 const QUICK_FILTERS = ['Tout', 'Vegan', 'Halal', 'Brunch', 'Terrasse'];
+
+const FILTER_KEYWORDS: Record<string, string[]> = {
+  Vegan: ['vegan', 'végétarien', 'vegetarien'],
+  Halal: ['halal'],
+  Brunch: ['brunch', 'petit-déj', 'breakfast'],
+  Terrasse: ['terrasse', 'outdoor'],
+};
+
+const POPULAR_CITIES: { name: string; coords: Coordinates }[] = [
+  { name: 'Paris', coords: { latitude: 48.8566, longitude: 2.3522 } },
+  { name: 'Lyon', coords: { latitude: 45.764, longitude: 4.8357 } },
+  { name: 'Marseille', coords: { latitude: 43.2965, longitude: 5.3698 } },
+  { name: 'Bordeaux', coords: { latitude: 44.8378, longitude: -0.5792 } },
+  { name: 'Lille', coords: { latitude: 50.6292, longitude: 3.0573 } },
+  { name: 'Toulouse', coords: { latitude: 43.6047, longitude: 1.4442 } },
+  { name: 'Nantes', coords: { latitude: 47.2184, longitude: -1.5536 } },
+  { name: 'Nice', coords: { latitude: 43.7102, longitude: 7.262 } },
+];
 
 type NotificationIcon =
   | 'pricetag'
@@ -132,7 +150,9 @@ function formatPrice(priceRange: number): string {
 
 export default function HomeScreen() {
   const { location, loading: locationLoading } = useLocation();
-  const { recommended, nearby, topRated, loading: recsLoading } = useRecommendations(location);
+  const [overrideLocation, setOverrideLocation] = useState<Coordinates | null>(null);
+  const effectiveLocation = overrideLocation ?? location;
+  const { all, recommended, nearby, topRated, loading: recsLoading } = useRecommendations(effectiveLocation);
   const { favoriteIds, toggleFavorite } = useFavoritesContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -141,20 +161,41 @@ export default function HomeScreen() {
   const [cityName, setCityName] = useState('Paris');
   const [userName, setUserName] = useState('U');
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
   const sheetAnim = useRef(new Animated.Value(SHEET_PEEK)).current;
+  const mapRef = useRef<MapSectionRef>(null);
+
+  const matchesFilter = useCallback(
+    (r: RestaurantWithDistance): boolean => {
+      if (activeFilter === 'Tout') return true;
+      const keywords = FILTER_KEYWORDS[activeFilter] ?? [activeFilter.toLowerCase()];
+      return keywords.some(
+        (k) =>
+          r.cuisine_type.some((c) => c.toLowerCase().includes(k)) ||
+          r.tags.some((t) => t.toLowerCase().includes(k)),
+      );
+    },
+    [activeFilter],
+  );
+
+  const visibleAll = useMemo(() => all.filter(matchesFilter), [all, matchesFilter]);
+  const visibleRecommended = useMemo(() => recommended.filter(matchesFilter), [recommended, matchesFilter]);
+  const visibleNearby = useMemo(() => nearby.filter(matchesFilter), [nearby, matchesFilter]);
+  const visibleTopRated = useMemo(() => topRated.filter(matchesFilter), [topRated, matchesFilter]);
 
   const showSuggestions = searchQuery.length > 0 && searchFocused;
 
   const suggestions = useMemo<Restaurant[]>(() => {
     if (searchQuery.length === 0) return [];
     const q = searchQuery.toLowerCase().trim();
-    return nearby.filter((r) => {
+    return all.filter((r) => {
       const nameMatch = r.name.toLowerCase().includes(q);
       const cuisineMatch = r.cuisine_type.some((c) => c.toLowerCase().includes(q));
       const addressMatch = r.address.toLowerCase().includes(q);
       return nameMatch || cuisineMatch || addressMatch;
     }).slice(0, 5);
-  }, [searchQuery, nearby]);
+  }, [searchQuery, all]);
 
   function handleSuggestionPress(id: string) {
     setSearchQuery('');
@@ -162,10 +203,10 @@ export default function HomeScreen() {
     router.push(`/restaurant/${id}`);
   }
 
-  const allRestaurants = nearby;
   const loading = locationLoading || recsLoading;
 
   useEffect(() => {
+    if (overrideLocation) return;
     async function reverseGeocode() {
       if (!location) return;
       try {
@@ -183,10 +224,62 @@ export default function HomeScreen() {
       }
     }
     reverseGeocode();
-  }, [location]);
+  }, [location, overrideLocation]);
 
   function handleMarkerPress(restaurant: Restaurant) {
     router.push(`/restaurant/${restaurant.id}`);
+  }
+
+  function handleRecenter() {
+    if (!effectiveLocation) return;
+    mapRef.current?.recenterTo({
+      latitude: effectiveLocation.latitude,
+      longitude: effectiveLocation.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+  }
+
+  function handleSelectCity(name: string, coords: Coordinates) {
+    setOverrideLocation(coords);
+    setCityName(name);
+    setLocationModalVisible(false);
+    setLocationSearch('');
+    mapRef.current?.recenterTo({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+  }
+
+  async function handleSearchLocation() {
+    const query = locationSearch.trim();
+    if (!query) return;
+    try {
+      const results = await Location.geocodeAsync(query);
+      if (results.length === 0) {
+        return;
+      }
+      const r = results[0];
+      handleSelectCity(query, { latitude: r.latitude, longitude: r.longitude });
+    } catch {
+      // Silent
+    }
+  }
+
+  function handleUseMyLocation() {
+    setOverrideLocation(null);
+    setLocationModalVisible(false);
+    setLocationSearch('');
+    if (location) {
+      mapRef.current?.recenterTo({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    }
   }
 
   function toggleSheet() {
@@ -200,10 +293,10 @@ export default function HomeScreen() {
     setSheetExpanded(!sheetExpanded);
   }
 
-  const region = location
+  const region = effectiveLocation
     ? {
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: effectiveLocation.latitude,
+        longitude: effectiveLocation.longitude,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }
@@ -229,7 +322,8 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <MapSection
-        restaurants={allRestaurants}
+        ref={mapRef}
+        restaurants={visibleAll}
         region={region}
         onMarkerPress={handleMarkerPress}
       />
@@ -243,7 +337,11 @@ export default function HomeScreen() {
             </View>
             <View style={styles.locationBlock}>
               <Text style={styles.locationLabel}>LOCALISATION</Text>
-              <TouchableOpacity style={styles.locationRow} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.locationRow}
+                activeOpacity={0.7}
+                onPress={() => setLocationModalVisible(true)}
+              >
                 <Text style={styles.locationCity} numberOfLines={1}>
                   {cityName}
                 </Text>
@@ -360,7 +458,11 @@ export default function HomeScreen() {
       </View>
 
       {/* My location button */}
-      <TouchableOpacity style={styles.locateBtn} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.locateBtn}
+        activeOpacity={0.8}
+        onPress={handleRecenter}
+      >
         <Ionicons name="navigate" size={18} color={Colors.light.primary} />
       </TouchableOpacity>
 
@@ -379,7 +481,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.sheetContent}
         >
           {/* Recommended section - "Parfait pour vous" */}
-          {recommended.length > 0 && (
+          {visibleRecommended.length > 0 && (
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderWrap}>
                 <SectionHeader
@@ -393,7 +495,7 @@ export default function HomeScreen() {
                 />
               </View>
               <FlatList
-                data={recommended}
+                data={visibleRecommended}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
@@ -411,12 +513,12 @@ export default function HomeScreen() {
           )}
 
           {/* Nearby section */}
-          {nearby.length > 0 && (
+          {visibleNearby.length > 0 && (
           <View style={styles.sectionWrap}>
             <View style={styles.sectionHeaderWrap}>
               <SectionHeader
                 title="À proximité"
-                subtitle={`${nearby.length} restaurants`}
+                subtitle={`${visibleNearby.length} restaurants`}
                 actionLabel="Voir tout"
                 onAction={() =>
                   router.push({ pathname: '/(tabs)/search', params: { filter: 'nearby' } })
@@ -425,7 +527,7 @@ export default function HomeScreen() {
               />
             </View>
             <FlatList
-              data={nearby.slice(0, 8)}
+              data={visibleNearby.slice(0, 8)}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
@@ -443,7 +545,7 @@ export default function HomeScreen() {
           )}
 
           {/* Top rated section */}
-          {topRated.length > 0 && (
+          {visibleTopRated.length > 0 && (
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderWrap}>
                 <SectionHeader
@@ -457,7 +559,7 @@ export default function HomeScreen() {
                 />
               </View>
               <FlatList
-                data={topRated}
+                data={visibleTopRated}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
@@ -471,6 +573,16 @@ export default function HomeScreen() {
                   />
                 )}
               />
+            </View>
+          )}
+
+          {visibleAll.length === 0 && activeFilter !== 'Tout' && (
+            <View style={styles.emptyFilterWrap}>
+              <Ionicons name="filter" size={32} color={Colors.light.textSecondary} />
+              <Text style={styles.emptyFilterTitle}>Aucun résultat pour « {activeFilter} »</Text>
+              <Text style={styles.emptyFilterSubtitle}>
+                Essayez un autre filtre ou élargissez votre zone.
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -532,6 +644,70 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
           )}
+        </View>
+      </Modal>
+
+      {/* Location picker modal */}
+      <Modal
+        visible={locationModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.notifModalContainer}>
+          <View style={styles.notifModalHeader}>
+            <TouchableOpacity
+              style={styles.notifCloseBtn}
+              onPress={() => setLocationModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={22} color={Colors.light.text} />
+            </TouchableOpacity>
+            <Text style={styles.notifModalTitle}>Choisir la zone</Text>
+            <View style={styles.notifCloseBtn} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.locationModalBody}>
+            <View style={styles.locationSearchBar}>
+              <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+              <TextInput
+                style={styles.locationSearchInput}
+                placeholder="Ville, quartier, code postal..."
+                placeholderTextColor={Colors.light.textSecondary}
+                value={locationSearch}
+                onChangeText={setLocationSearch}
+                onSubmitEditing={handleSearchLocation}
+                returnKeyType="search"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.useLocationBtn}
+              activeOpacity={0.8}
+              onPress={handleUseMyLocation}
+            >
+              <Ionicons name="navigate" size={18} color={Colors.light.primary} />
+              <Text style={styles.useLocationBtnLabel}>Utiliser ma position actuelle</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.locationSectionLabel}>Villes populaires</Text>
+            {POPULAR_CITIES.map((city) => (
+              <TouchableOpacity
+                key={city.name}
+                style={styles.cityRow}
+                activeOpacity={0.7}
+                onPress={() => handleSelectCity(city.name, city.coords)}
+              >
+                <Ionicons name="location-outline" size={18} color={Colors.light.primary} />
+                <Text style={styles.cityRowLabel}>{city.name}</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={Colors.light.textSecondary}
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -965,5 +1141,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.textSecondary,
     fontWeight: '600',
+  },
+
+  /* ── Empty filter ── */
+  emptyFilterWrap: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  emptyFilterTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+    textAlign: 'center',
+  },
+  emptyFilterSubtitle: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    textAlign: 'center',
+  },
+
+  /* ── Location modal ── */
+  locationModalBody: {
+    padding: 20,
+    gap: 14,
+  },
+  locationSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  locationSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.light.text,
+    padding: 0,
+  },
+  useLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: Colors.light.primaryLight,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  useLocationBtnLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.light.primary,
+  },
+  locationSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+    letterSpacing: 1,
+    marginTop: 8,
+    textTransform: 'uppercase',
+  },
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.light.borderLight,
+  },
+  cityRowLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.text,
   },
 });
