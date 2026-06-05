@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
+import PlansInfoModal from '../../src/components/restaurant/PlansInfoModal';
 
 interface ArgumentBlock {
   icon: keyof typeof Ionicons.glyphMap;
@@ -74,6 +75,7 @@ export default function LoginProScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [plansInfoVisible, setPlansInfoVisible] = useState(false);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -82,17 +84,22 @@ export default function LoginProScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      Alert.alert('Erreur', error.message);
-    } else {
+      if (error) {
+        Alert.alert('Erreur', error.message);
+        return;
+      }
       router.replace('/(restaurant)/dashboard');
+    } catch (_error) {
+      Alert.alert('Erreur', 'Connexion impossible. Vérifiez votre connexion internet et réessayez.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -170,6 +177,9 @@ export default function LoginProScreen() {
                   plan.popular ? styles.planButtonPrimary : styles.planButtonOutline,
                 ]}
                 activeOpacity={0.85}
+                onPress={() => setPlansInfoVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Voir le détail du plan ${plan.name}`}
               >
                 <Text
                   style={[
@@ -185,6 +195,17 @@ export default function LoginProScreen() {
             </View>
           ))}
         </View>
+
+        <TouchableOpacity
+          style={styles.detailLink}
+          onPress={() => setPlansInfoVisible(true)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Voir le détail des abonnements"
+        >
+          <Ionicons name="information-circle-outline" size={16} color={Colors.light.primary} />
+          <Text style={styles.detailLinkText}>Voir le détail des abonnements</Text>
+        </TouchableOpacity>
 
         {/* Login form */}
         <View style={styles.card}>
@@ -206,6 +227,9 @@ export default function LoginProScreen() {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                accessibilityLabel="Email professionnel"
+                textContentType="emailAddress"
+                autoComplete="email"
               />
             </View>
 
@@ -223,10 +247,15 @@ export default function LoginProScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                accessibilityLabel="Mot de passe"
+                textContentType="password"
+                autoComplete="current-password"
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -263,6 +292,11 @@ export default function LoginProScreen() {
             <Text style={styles.footerBack}>Retour à l'app</Text>
           </TouchableOpacity>
         </View>
+
+        <PlansInfoModal
+          visible={plansInfoVisible}
+          onClose={() => setPlansInfoVisible(false)}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -358,7 +392,19 @@ const styles = StyleSheet.create({
   plansRow: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 12,
+  },
+  detailLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginBottom: 28,
+  },
+  detailLinkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.primary,
   },
   planCard: {
     flex: 1,

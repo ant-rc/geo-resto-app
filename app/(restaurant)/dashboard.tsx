@@ -29,6 +29,7 @@ import PromoModal from '../../src/components/restaurant/PromoModal';
 import EventModal from '../../src/components/restaurant/EventModal';
 import BoostModal from '../../src/components/restaurant/BoostModal';
 import CancelSubModal from '../../src/components/restaurant/CancelSubModal';
+import WelcomeOfferModal from '../../src/components/restaurant/WelcomeOfferModal';
 
 export default function DashboardScreen() {
   const [currentPlan, setCurrentPlan] = useState<PlanId>('free');
@@ -36,6 +37,8 @@ export default function DashboardScreen() {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [cancelSubVisible, setCancelSubVisible] = useState(false);
+  // Post-login upsell, shown once to free-plan owners.
+  const [welcomeVisible, setWelcomeVisible] = useState(currentPlan === 'free');
 
   // Restaurant profile state
   const [restaurantName, setRestaurantName] = useState('Mon Restaurant');
@@ -484,6 +487,15 @@ export default function DashboardScreen() {
         onClose={() => setCancelSubVisible(false)}
         onConfirm={confirmCancelSubscription}
         planData={getPlanData(currentPlan)}
+      />
+
+      <WelcomeOfferModal
+        visible={welcomeVisible}
+        onClose={() => setWelcomeVisible(false)}
+        onDiscover={() => {
+          setWelcomeVisible(false);
+          setPlansModalVisible(true);
+        }}
       />
     </ScrollView>
   );
