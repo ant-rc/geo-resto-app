@@ -59,7 +59,11 @@ export default function ImageCarousel({
       </ScrollView>
       <View style={styles.bottomGradient} />
       {images.length > 1 && (
-        <View style={styles.pagination}>
+        <View
+          style={styles.pagination}
+          importantForAccessibility="no-hide-descendants"
+          accessibilityElementsHidden
+        >
           {images.map((_, index) => (
             <View
               key={index}
@@ -72,7 +76,11 @@ export default function ImageCarousel({
         </View>
       )}
       {images.length > 1 && (
-        <View style={styles.counter}>
+        <View
+          style={styles.counter}
+          accessible
+          accessibilityLabel={`Image ${activeIndex + 1} sur ${images.length}`}
+        >
           <Ionicons name="images-outline" size={12} color={Colors.light.textOnPrimary} />
           <Text style={styles.counterText}>
             {activeIndex + 1}/{images.length}
@@ -128,7 +136,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.light.overlayStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,

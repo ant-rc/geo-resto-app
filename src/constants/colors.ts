@@ -18,13 +18,14 @@ export const Colors = {
     textOnPrimary: '#FFFFFF',
     border: '#E0F2F1',
     borderLight: '#E0F2F1',
-    error: '#FF6B6B',
+    error: '#DC2626',
     success: '#4ADE80',
     warning: '#F5A623',
     warningLight: '#FEF3C7',
     primaryTransparent: 'rgba(13, 148, 136, 0.8)',
     shadow: 'rgba(13, 148, 136, 0.08)',
     overlay: 'rgba(0, 0, 0, 0.35)',
+    overlayStrong: 'rgba(0, 0, 0, 0.5)',
     mapOverlay: 'rgba(251, 255, 255, 0.92)',
   },
   dark: {
@@ -53,6 +54,7 @@ export const Colors = {
     primaryTransparent: 'rgba(20, 184, 166, 0.8)',
     shadow: 'rgba(0, 0, 0, 0.3)',
     overlay: 'rgba(0, 0, 0, 0.6)',
+    overlayStrong: 'rgba(0, 0, 0, 0.7)',
     mapOverlay: 'rgba(17, 17, 17, 0.92)',
   },
 };

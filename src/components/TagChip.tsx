@@ -21,11 +21,15 @@ export default function TagChip({
       style={[
         styles.chip,
         isSmall && styles.chipSmall,
+        onPress && styles.chipInteractive,
         selected && styles.chipSelected,
       ]}
       onPress={onPress}
       activeOpacity={0.75}
       disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityState={onPress ? { selected } : undefined}
+      accessibilityLabel={label}
     >
       <Text
         style={[
@@ -53,6 +57,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  chipInteractive: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   chipSelected: {
     backgroundColor: Colors.light.primary,

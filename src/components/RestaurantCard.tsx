@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   View,
   Text,
@@ -20,7 +21,7 @@ interface RestaurantCardProps {
   onFavoriteToggle?: () => void;
 }
 
-export default function RestaurantCard({
+function RestaurantCard({
   restaurant,
   variant,
   isFavorite,
@@ -48,6 +49,14 @@ export default function RestaurantCard({
   );
 }
 
+export default memo(
+  RestaurantCard,
+  (prev, next) =>
+    prev.restaurant.id === next.restaurant.id &&
+    prev.variant === next.variant &&
+    prev.isFavorite === next.isFavorite
+);
+
 /* ---------- Image placeholder shared ---------- */
 
 function ImagePlaceholder({ size }: { size: number }) {
@@ -68,7 +77,13 @@ function MiniVariant({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity style={miniStyles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={miniStyles.card}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`Voir ${restaurant.name}`}
+    >
       <View style={miniStyles.imageWrap}>
         {restaurant.image_url ? (
           <Image source={{ uri: restaurant.image_url }} style={miniStyles.image} />
@@ -116,7 +131,13 @@ function StandardVariant({
   const imageSource = restaurant.images?.[0] ?? restaurant.image_url;
 
   return (
-    <TouchableOpacity style={stdStyles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={stdStyles.card}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`Voir ${restaurant.name}`}
+    >
       {/* Hero image */}
       <View style={stdStyles.imageWrap}>
         {imageSource ? (
@@ -150,7 +171,17 @@ function StandardVariant({
 
         {/* Heart button - top-right */}
         {onFavoriteToggle && (
-          <TouchableOpacity style={stdStyles.heartBtn} onPress={onFavoriteToggle}>
+          <TouchableOpacity
+            style={stdStyles.heartBtn}
+            onPress={onFavoriteToggle}
+            accessibilityRole="button"
+            accessibilityState={{ selected: !!isFavorite }}
+            accessibilityLabel={
+              isFavorite
+                ? `Retirer ${restaurant.name} des favoris`
+                : `Ajouter ${restaurant.name} aux favoris`
+            }
+          >
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
               size={18}
@@ -193,7 +224,13 @@ function WideVariant({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity style={wideStyles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={wideStyles.card}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`Voir ${restaurant.name}`}
+    >
       {/* Hero image */}
       <View style={wideStyles.imageWrap}>
         {restaurant.image_url ? (
@@ -357,7 +394,7 @@ const stdStyles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 80,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: Colors.light.overlay,
   },
   heartBtn: {
     position: 'absolute',
@@ -377,7 +414,7 @@ const stdStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.light.overlayStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -394,7 +431,7 @@ const stdStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.light.overlayStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -457,7 +494,7 @@ const wideStyles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 60,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: Colors.light.overlay,
   },
   ratingOverlay: {
     position: 'absolute',
@@ -466,7 +503,7 @@ const wideStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.light.overlayStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
