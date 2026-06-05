@@ -31,6 +31,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
+        tabBarItemStyle: styles.tabItem,
       }}
     >
       <Tabs.Screen
@@ -63,32 +64,32 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.light.surfaceGlass,
-    borderTopWidth: 0,
-    borderWidth: 1,
-    borderColor: Colors.light.surfaceGlassBorder,
-    paddingBottom: 0,
-    paddingTop: 0,
+    height: Platform.OS === 'ios' ? 84 : 64,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+    paddingTop: 8,
+    backgroundColor: Colors.light.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.borderLight,
+    borderRadius: 0,
+    borderWidth: 0,
     ...(Platform.OS === 'web'
       ? {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.08,
-          shadowRadius: 24,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
         }
       : {
-          elevation: 16,
-          shadowColor: Colors.light.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 20,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
         }),
+  },
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconWrap: {
     width: 44,
