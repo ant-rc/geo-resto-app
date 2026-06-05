@@ -18,7 +18,11 @@ export async function getRestaurantsNear(
     try {
       places = await searchNearbyFoodPlaces(location, radiusMeters);
       await setCachedPlaces(location.latitude, location.longitude, radiusMeters, places);
-    } catch {
+    } catch (err) {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.warn('[GooglePlaces] API call failed, falling back to mocks:', err);
+      }
       places = null;
     }
   }

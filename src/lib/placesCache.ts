@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GooglePlace } from './googlePlaces';
 
-const CACHE_PREFIX = '@tastly/places-cache';
+const CACHE_PREFIX = '@tastly/places-cache:v2';
 const TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {

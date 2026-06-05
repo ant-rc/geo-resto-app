@@ -37,6 +37,12 @@ export const FOOD_PRIMARY_TYPES = [
   'ice_cream_shop',
 ];
 
+const TYPE_GROUPS: string[][] = [
+  ['restaurant', 'fast_food_restaurant', 'meal_takeaway', 'meal_delivery', 'food_court'],
+  ['cafe', 'coffee_shop', 'bakery', 'ice_cream_shop'],
+  ['bar', 'pub', 'wine_bar'],
+];
+
 export type GooglePriceLevel =
   | 'PRICE_LEVEL_FREE'
   | 'PRICE_LEVEL_INEXPENSIVE'
@@ -63,16 +69,12 @@ export interface GooglePlace {
   businessStatus?: string;
 }
 
-export async function searchNearbyFoodPlaces(
+async function fetchTypeGroup(
+  types: string[],
   center: Coordinates,
-  radiusMeters: number = 1500,
-  maxResults: number = 20,
+  radius: number,
+  apiKey: string,
 ): Promise<GooglePlace[]> {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
-  if (!apiKey) {
-    throw new Error('Missing EXPO_PUBLIC_GOOGLE_PLACES_KEY');
-  }
-
   const response = await fetch(SEARCH_URL, {
     method: 'POST',
     headers: {
@@ -81,15 +83,15 @@ export async function searchNearbyFoodPlaces(
       'X-Goog-FieldMask': FIELD_MASK,
     },
     body: JSON.stringify({
-      includedPrimaryTypes: FOOD_PRIMARY_TYPES,
-      maxResultCount: Math.min(maxResults, 20),
+      includedPrimaryTypes: types,
+      maxResultCount: 20,
       languageCode: 'fr',
       regionCode: 'fr',
       rankPreference: 'DISTANCE',
       locationRestriction: {
         circle: {
           center: { latitude: center.latitude, longitude: center.longitude },
-          radius: radiusMeters,
+          radius,
         },
       },
     }),
@@ -100,11 +102,40 @@ export async function searchNearbyFoodPlaces(
   }
 
   const data = (await response.json()) as { places?: GooglePlace[] };
-  const places = data.places ?? [];
+  return data.places ?? [];
+}
 
-  return places.filter(
-    (p) => p.businessStatus === undefined || p.businessStatus === 'OPERATIONAL',
+export async function searchNearbyFoodPlaces(
+  center: Coordinates,
+  radiusMeters: number = 1500,
+): Promise<GooglePlace[]> {
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
+  if (!apiKey) {
+    throw new Error('Missing EXPO_PUBLIC_GOOGLE_PLACES_KEY');
+  }
+
+  const results = await Promise.allSettled(
+    TYPE_GROUPS.map((types) => fetchTypeGroup(types, center, radiusMeters, apiKey)),
   );
+
+  const merged = new Map<string, GooglePlace>();
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue;
+    for (const place of result.value) {
+      if (place.businessStatus === undefined || place.businessStatus === 'OPERATIONAL') {
+        merged.set(place.id, place);
+      }
+    }
+  }
+
+  if (merged.size === 0) {
+    const firstError = results.find((r) => r.status === 'rejected');
+    if (firstError && firstError.status === 'rejected') {
+      throw firstError.reason;
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 export function buildPhotoUrl(photoName: string, maxWidth: number = 800): string {

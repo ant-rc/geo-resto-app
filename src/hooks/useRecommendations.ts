@@ -17,6 +17,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 interface UseRecommendationsResult {
+  all: RestaurantWithDistance[];
   recommended: RestaurantWithDistance[];
   nearby: RestaurantWithDistance[];
   topRated: RestaurantWithDistance[];
@@ -27,6 +28,7 @@ interface UseRecommendationsResult {
 export function useRecommendations(
   userLocation: Coordinates | null
 ): UseRecommendationsResult {
+  const [all, setAll] = useState<RestaurantWithDistance[]>([]);
   const [recommended, setRecommended] = useState<RestaurantWithDistance[]>([]);
   const [nearby, setNearby] = useState<RestaurantWithDistance[]>([]);
   const [topRated, setTopRated] = useState<RestaurantWithDistance[]>([]);
@@ -57,6 +59,7 @@ export function useRecommendations(
 
     const source = await getRestaurantsNear(userLocation);
     const withDistance = enrichWithDistance(source, userLocation);
+    setAll(withDistance);
 
     const ranked = rankRestaurants(withDistance, userPrefs);
     setRecommended(ranked.slice(0, 10));
@@ -78,5 +81,5 @@ export function useRecommendations(
     fetchData();
   }, [fetchData]);
 
-  return { recommended, nearby, topRated, loading, preferences };
+  return { all, recommended, nearby, topRated, loading, preferences };
 }
