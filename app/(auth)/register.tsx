@@ -46,12 +46,12 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
           },
         },
       });
@@ -60,6 +60,18 @@ export default function RegisterScreen() {
         Alert.alert('Erreur', error.message);
         return;
       }
+
+      // When email confirmation is enabled, signUp returns no session: the user
+      // must confirm before logging in. Don't send them into onboarding sessionless.
+      if (!data.session) {
+        Alert.alert(
+          'Vérifiez votre email',
+          'Un email de confirmation vous a été envoyé. Confirmez votre compte, puis connectez-vous.',
+        );
+        router.replace('/(auth)/login');
+        return;
+      }
+
       router.replace('/(auth)/onboarding');
     } catch (_error) {
       Alert.alert('Erreur', 'Inscription impossible. Vérifiez votre connexion internet et réessayez.');

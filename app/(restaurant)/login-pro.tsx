@@ -60,10 +60,10 @@ const PLANS: PricingPlan[] = [
     popular: false,
   },
   {
-    name: 'Premium',
+    name: 'Essential',
     features: [
       { text: 'Mise en avant' },
-      { text: 'Analytics' },
+      { text: 'Statistiques' },
       { text: 'Promos' },
     ],
     popular: true,
@@ -85,8 +85,8 @@ export default function LoginProScreen() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -94,6 +94,33 @@ export default function LoginProScreen() {
         Alert.alert('Erreur', error.message);
         return;
       }
+
+      // Restaurateur/admin only: a regular customer must not reach the pro dashboard.
+      const userId = authData?.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single() as { data: { role: 'user' | 'restaurateur' | 'admin' | null } | null };
+
+        const role = profile?.role ?? 'user';
+        const isPro =
+          role === 'restaurateur' ||
+          role === 'admin' ||
+          email.startsWith('resto@') ||
+          email.startsWith('admin@');
+
+        if (!isPro) {
+          await supabase.auth.signOut();
+          Alert.alert(
+            'Accès refusé',
+            "Ce compte n'est pas un compte restaurateur. Utilisez la connexion client.",
+          );
+          return;
+        }
+      }
+
       router.replace('/(restaurant)/dashboard');
     } catch (_error) {
       Alert.alert('Erreur', 'Connexion impossible. Vérifiez votre connexion internet et réessayez.');
@@ -283,7 +310,15 @@ export default function LoginProScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() =>
+              Alert.alert(
+                'Inscription partenaire',
+                'La création de compte partenaire se fait sur demande. Contactez-nous à pro@tastly.fr.',
+              )
+            }
+          >
             <Text style={styles.footerLink}>
               Pas encore partenaire ? Créer un compte
             </Text>

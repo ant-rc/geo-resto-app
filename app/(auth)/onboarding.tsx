@@ -46,23 +46,34 @@ export default function OnboardingScreen() {
   async function handleFinish() {
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      const preferences: UserPreferences = {
-        cuisineTypes: selectedCuisines,
-        priceRange: selectedPrices,
-        maxDistance: selectedDistance,
-        onboardingCompleted: true,
-      };
+      if (user) {
+        const preferences: UserPreferences = {
+          cuisineTypes: selectedCuisines,
+          priceRange: selectedPrices,
+          maxDistance: selectedDistance,
+          onboardingCompleted: true,
+        };
 
-      await supabase
-        .from('profiles')
-        .update({ preferences } as never)
-        .eq('id', user.id);
+        const { error } = await supabase
+          .from('profiles')
+          .update({ preferences } as never)
+          .eq('id', user.id);
+
+        if (error) {
+          Alert.alert('Erreur', 'Impossible d\'enregistrer vos préférences. Réessayez.');
+          return;
+        }
+      }
+
+      router.replace('/(tabs)');
+    } catch (_error) {
+      Alert.alert('Erreur', 'Une erreur est survenue. Vérifiez votre connexion.');
+    } finally {
+      setLoading(false);
     }
-
-    router.replace('/(tabs)');
   }
 
   function handleSkip() {

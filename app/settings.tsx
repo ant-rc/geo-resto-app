@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from '../src/lib/supabase';
 import { Colors } from '../src/constants/colors';
 
 export default function SettingsScreen() {
@@ -37,7 +38,16 @@ export default function SettingsScreen() {
       'Cette action est irréversible. Êtes-vous sûr ?',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => router.replace('/(auth)/login') },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            // La suppression réelle des données nécessite une Edge Function côté serveur
+            // (l'anon key ne peut pas supprimer un utilisateur). On clôt au minimum la session.
+            await supabase.auth.signOut();
+            router.replace('/(auth)/login');
+          },
+        },
       ],
     );
   }
