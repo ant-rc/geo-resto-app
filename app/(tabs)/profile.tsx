@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -57,14 +57,20 @@ export default function ProfileScreen() {
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [promoEnabled, setPromoEnabled] = useState(true);
 
+  const mountedRef = useRef(true);
+
   useEffect(() => {
+    mountedRef.current = true;
     fetchProfile();
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   async function fetchProfile() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!user || !mountedRef.current) {
         return;
       }
 
@@ -74,15 +80,17 @@ export default function ProfileScreen() {
         .eq('id', user.id)
         .single();
 
+      if (!mountedRef.current) return;
+
       if (error && error.code !== 'PGRST116') {
         Alert.alert('Erreur', 'Impossible de charger le profil');
       } else if (data) {
         setProfile(data);
       }
     } catch (_error) {
-      Alert.alert('Erreur', 'Impossible de charger le profil');
+      if (mountedRef.current) Alert.alert('Erreur', 'Impossible de charger le profil');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }
 

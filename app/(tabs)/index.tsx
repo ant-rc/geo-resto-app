@@ -13,9 +13,11 @@ import {
   Platform,
   Modal,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useRecommendations } from '../../src/hooks/useRecommendations';
@@ -206,7 +208,26 @@ export default function HomeScreen() {
   const loading = locationLoading || recsLoading;
 
   useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !active) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single() as { data: { full_name: string | null } | null };
+      const initial = data?.full_name?.trim().charAt(0);
+      if (active && initial) setUserName(initial.toUpperCase());
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (overrideLocation) return;
+    let active = true;
     async function reverseGeocode() {
       if (!location) return;
       try {
@@ -214,16 +235,19 @@ export default function HomeScreen() {
           latitude: location.latitude,
           longitude: location.longitude,
         });
-        if (result) {
+        if (active && result) {
           const district = result.district || result.subregion || '';
           const city = result.city || 'Paris';
           setCityName(district ? `${district}, ${city}` : city);
         }
       } catch (_err) {
-        setCityName('Paris');
+        if (active) setCityName('Paris');
       }
     }
     reverseGeocode();
+    return () => {
+      active = false;
+    };
   }, [location, overrideLocation]);
 
   function handleMarkerPress(restaurant: Restaurant) {
@@ -259,12 +283,13 @@ export default function HomeScreen() {
     try {
       const results = await Location.geocodeAsync(query);
       if (results.length === 0) {
+        Alert.alert('Lieu introuvable', `Aucun résultat pour « ${query} ».`);
         return;
       }
       const r = results[0];
       handleSelectCity(query, { latitude: r.latitude, longitude: r.longitude });
     } catch {
-      // Silent
+      Alert.alert('Erreur', 'Recherche de lieu impossible. Vérifiez votre connexion et réessayez.');
     }
   }
 
@@ -608,8 +633,7 @@ export default function HomeScreen() {
             <View style={styles.notifCloseBtn} />
           </View>
 
-          {MOCK_NOTIFICATIONS.every((n) => !n.unread) &&
-          MOCK_NOTIFICATIONS.length === 0 ? (
+          {MOCK_NOTIFICATIONS.length === 0 ? (
             <View style={styles.notifEmpty}>
               <Ionicons
                 name="notifications-off"

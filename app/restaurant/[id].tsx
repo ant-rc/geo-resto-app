@@ -11,6 +11,7 @@ import {
   Share,
   Dimensions,
   Image,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,10 +96,12 @@ function getMockReviews(restaurantId: string): ReviewWithProfile[] {
 }
 
 export default function RestaurantDetailScreen() {
-  const { id, distance: rawDistance } = useLocalSearchParams<{
-    id: string;
+  const { id: rawId, distance: rawDistance } = useLocalSearchParams<{
+    id?: string | string[];
     distance?: string;
   }>();
+  // Route params can be string | string[] | undefined — normalize to a single id.
+  const id = Array.isArray(rawId) ? rawId[0] ?? '' : rawId ?? '';
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [reviews, setReviews] = useState<ReviewWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +128,11 @@ export default function RestaurantDetailScreen() {
   }, [id]);
 
   async function fetchRestaurant() {
-    const found = await getRestaurantById(id as string);
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const found = await getRestaurantById(id);
     if (found) {
       setRestaurant(found);
     } else {
@@ -184,7 +191,7 @@ export default function RestaurantDetailScreen() {
     return (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={40} color={Colors.light.border} />
-        <Text style={styles.errorText}>Restaurant non trouv\u00e9</Text>
+        <Text style={styles.errorText}>Restaurant non trouvé</Text>
       </View>
     );
   }
@@ -205,10 +212,6 @@ export default function RestaurantDetailScreen() {
     if (cityPart) metaParts.push(cityPart);
   }
   metaParts.push(formatPriceRange(restaurant.price_range));
-
-  // Allergy match placeholder: show if restaurant has matching tags
-  // TODO: Compare restaurant.tags with user preferences when implemented
-  const showAllergyMatch = false;
 
   return (
     <View style={styles.container}>
@@ -291,20 +294,6 @@ export default function RestaurantDetailScreen() {
             ))}
           </View>
 
-          {/* Allergy Match card (conditional placeholder) */}
-          {showAllergyMatch && (
-            <View style={styles.allergyCard}>
-              <View style={styles.allergyIcon}>
-                <Ionicons name="leaf" size={28} color={Colors.light.secondary} />
-              </View>
-              <View style={styles.allergyTextContainer}>
-                <Text style={styles.allergyTitle}>Perfect Allergy Match</Text>
-                <Text style={styles.allergyDescription}>
-                  Ce restaurant est 100% compatible avec votre profil alimentaire.
-                </Text>
-              </View>
-            </View>
-          )}
 
           {/* Stats bar: Distance / Walk / Reviews */}
           <View style={styles.statsBar}>
@@ -394,7 +383,7 @@ export default function RestaurantDetailScreen() {
           {/* Description */}
           {restaurant.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>\u00c0 propos</Text>
+              <Text style={styles.sectionTitle}>À propos</Text>
               <Text style={styles.description}>{restaurant.description}</Text>
             </View>
           )}
@@ -407,7 +396,7 @@ export default function RestaurantDetailScreen() {
                 style={styles.infoRow}
                 onPress={() => {
                   const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.latitude},${restaurant.longitude}`;
-                  import('react-native').then(({ Linking: L }) => L.openURL(url));
+                  Linking.openURL(url);
                 }}
                 activeOpacity={0.7}
                 accessibilityLabel={`Adresse : ${restaurant.address}`}
@@ -427,9 +416,7 @@ export default function RestaurantDetailScreen() {
                   <TouchableOpacity
                     style={styles.infoRow}
                     onPress={() => {
-                      import('react-native').then(({ Linking: L }) =>
-                        L.openURL(`tel:${restaurant.phone}`),
-                      );
+                      Linking.openURL(`tel:${restaurant.phone}`);
                     }}
                     activeOpacity={0.7}
                   >
@@ -448,9 +435,7 @@ export default function RestaurantDetailScreen() {
                   <TouchableOpacity
                     style={styles.infoRow}
                     onPress={() => {
-                      import('react-native').then(({ Linking: L }) =>
-                        L.openURL(restaurant.website!),
-                      );
+                      Linking.openURL(restaurant.website!);
                     }}
                     activeOpacity={0.7}
                   >

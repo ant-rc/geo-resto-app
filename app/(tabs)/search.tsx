@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,8 @@ import { Colors } from '../../src/constants/colors';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useRestaurants, RestaurantFilters } from '../../src/hooks/useRestaurants';
 import RestaurantCard from '../../src/components/RestaurantCard';
-import { CUISINE_OPTIONS, TAG_OPTIONS, DISTANCE_OPTIONS } from '../../src/constants/data';
+import { useFavoritesContext } from '../../src/context/FavoritesContext';
+import { CUISINE_OPTIONS, TAG_OPTIONS } from '../../src/constants/data';
 
 const PRICE_SEGMENTS = [
   { label: '\u20AC', value: 1 },
@@ -25,42 +27,43 @@ const PRICE_SEGMENTS = [
   { label: '\u20AC\u20AC\u20AC\u20AC', value: 4 },
 ];
 
-const TAG_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  vegan: 'leaf',
-  halal: 'moon',
-  fast: 'flash',
-  brunch: 'cafe',
-  terrasse: 'sunny',
-  livraison: 'bicycle',
-  'sans gluten': 'ban',
-  bio: 'nutrition',
-  romantique: 'heart',
-  famille: 'people',
-};
-
-type ViewMode = 'list' | 'map';
-
 export default function SearchScreen() {
-  const params = useLocalSearchParams<{ q?: string }>();
+  const params = useLocalSearchParams<{ q?: string; filter?: string }>();
   const [searchQuery, setSearchQuery] = useState(params.q ?? '');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'distance' | 'rating'>(
+    params.filter === 'top-rated' || params.filter === 'recommended' ? 'rating' : 'distance'
+  );
   const { location } = useLocation();
+  const { favoriteIds, toggleFavorite } = useFavoritesContext();
+
+  // Resync state when navigated with new params (the tab screen stays mounted).
+  useEffect(() => {
+    if (typeof params.q === 'string') setSearchQuery(params.q);
+  }, [params.q]);
+
+  useEffect(() => {
+    if (params.filter === 'top-rated' || params.filter === 'recommended') {
+      setSortBy('rating');
+    } else if (params.filter === 'nearby') {
+      setSortBy('distance');
+    }
+  }, [params.filter]);
 
   const filters = useMemo<RestaurantFilters>(
     () => ({
       searchQuery: searchQuery || undefined,
-      cuisineType: selectedCuisines.length === 1 ? selectedCuisines[0] : undefined,
+      cuisineTypes: selectedCuisines.length > 0 ? selectedCuisines : undefined,
       priceRange: selectedPrice ? [selectedPrice, selectedPrice] as [number, number] : undefined,
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       maxDistance: selectedDistance ?? undefined,
-      sortBy: 'distance',
+      sortBy,
       userLocation: location,
     }),
-    [searchQuery, selectedCuisines, selectedPrice, selectedTags, selectedDistance, location]
+    [searchQuery, selectedCuisines, selectedPrice, selectedTags, selectedDistance, sortBy, location]
   );
 
   const { restaurants, loading } = useRestaurants(filters);
@@ -129,6 +132,9 @@ export default function SearchScreen() {
                   style={[styles.filterChip, isActive && styles.filterChipActive]}
                   onPress={() => toggleCuisine(cuisine)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={cuisine}
                 >
                   <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
                     {cuisine}
@@ -152,6 +158,9 @@ export default function SearchScreen() {
                     style={[styles.segmentBtn, isActive && styles.segmentBtnActive]}
                     onPress={() => togglePrice(seg.value)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`Prix niveau ${seg.value}`}
                   >
                     <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
                       {seg.label}
@@ -172,6 +181,9 @@ export default function SearchScreen() {
                     style={[styles.segmentBtn, isActive && styles.segmentBtnActive]}
                     onPress={() => toggleDistance(km)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`Distance ${km} kilomètres`}
                   >
                     <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
                       {km}km
@@ -195,6 +207,9 @@ export default function SearchScreen() {
                   style={[styles.filterChip, isActive && styles.filterChipActive]}
                   onPress={() => toggleTag(tag)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={tag}
                 >
                   <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
                     {tag.charAt(0).toUpperCase() + tag.slice(1)}
@@ -235,14 +250,16 @@ export default function SearchScreen() {
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Effacer la recherche"
+              >
                 <Ionicons name="close-circle" size={18} color={Colors.light.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity style={styles.filterSquareBtn} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={18} color={Colors.light.textOnPrimary} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -256,7 +273,12 @@ export default function SearchScreen() {
           data={restaurants}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <RestaurantCard restaurant={item} variant="wide" />
+            <RestaurantCard
+              restaurant={item}
+              variant="wide"
+              isFavorite={favoriteIds.has(item.id)}
+              onFavoriteToggle={() => toggleFavorite(item.id)}
+            />
           )}
           contentContainerStyle={styles.resultsList}
           showsVerticalScrollIndicator={false}
@@ -293,7 +315,13 @@ export default function SearchScreen() {
             Tout effacer
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.showResultsBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.showResultsBtn}
+          activeOpacity={0.85}
+          onPress={Keyboard.dismiss}
+          accessibilityRole="button"
+          accessibilityLabel={`Afficher ${restaurants.length} résultats`}
+        >
           <Text style={styles.showResultsText}>
             {loading ? 'Recherche...' : `Afficher ${restaurants.length} résultats`}
           </Text>
@@ -381,19 +409,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.text,
   },
-  filterSquareBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: Colors.light.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   /* Filters */
   filtersContainer: {
     gap: 20,
-    paddingBottom: 200,
+    paddingBottom: 8,
   },
 
   /* Filter section */
@@ -474,14 +494,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 
-  distanceChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  distanceChipTextActive: {
-    color: Colors.light.textOnPrimary,
-  },
 
   /* Results */
   resultsList: {
