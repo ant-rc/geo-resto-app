@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../src/lib/supabase';
 import { Colors } from '../../src/constants/colors';
 import {
@@ -31,14 +32,16 @@ import BoostModal from '../../src/components/restaurant/BoostModal';
 import CancelSubModal from '../../src/components/restaurant/CancelSubModal';
 import WelcomeOfferModal from '../../src/components/restaurant/WelcomeOfferModal';
 
+const WELCOME_SEEN_KEY = 'restaurant_welcome_offer_seen';
+
 export default function DashboardScreen() {
   const [currentPlan, setCurrentPlan] = useState<PlanId>('free');
   const [plansModalVisible, setPlansModalVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [cancelSubVisible, setCancelSubVisible] = useState(false);
-  // Post-login upsell, shown once to free-plan owners.
-  const [welcomeVisible, setWelcomeVisible] = useState(currentPlan === 'free');
+  // Post-login upsell, shown once to free-plan owners (persisted across launches).
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
 
   // Restaurant profile state
   const [restaurantName, setRestaurantName] = useState('Mon Restaurant');
@@ -71,6 +74,21 @@ export default function DashboardScreen() {
   // Boost/highlight form state
   const [boostModalVisible, setBoostModalVisible] = useState(false);
   const [boostDuration, setBoostDuration] = useState<BoostDuration>(7);
+
+  useEffect(() => {
+    AsyncStorage.getItem(WELCOME_SEEN_KEY)
+      .then((seen) => {
+        if (!seen && currentPlan === 'free') setWelcomeVisible(true);
+      })
+      .catch(() => {});
+    // Shown once on first dashboard visit; intentionally runs on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function dismissWelcome() {
+    setWelcomeVisible(false);
+    AsyncStorage.setItem(WELCOME_SEEN_KEY, '1').catch(() => {});
+  }
 
   function toggleArticle(id: string) {
     setPromoArticles((prev) => prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]);
@@ -161,21 +179,12 @@ export default function DashboardScreen() {
   }
 
   function confirmCancelSubscription() {
+    // CancelSubModal is already the confirmation step — no second Alert prompt.
+    setCurrentPlan('free');
+    setCancelSubVisible(false);
     Alert.alert(
-      'Résilier votre abonnement',
-      'Vous perdrez l\'accès aux fonctionnalités premium à la fin de la période en cours. Êtes-vous sûr ?',
-      [
-        { text: 'Garder mon abonnement', style: 'cancel' },
-        {
-          text: 'Résilier l\'abonnement',
-          style: 'destructive',
-          onPress: () => {
-            setCurrentPlan('free');
-            setCancelSubVisible(false);
-            Alert.alert('Résiliation effectuée', 'Votre abonnement prendra fin à la prochaine échéance. Vous pouvez le réactiver à tout moment.');
-          },
-        },
-      ]
+      'Résiliation effectuée',
+      'Votre abonnement prendra fin à la prochaine échéance. Vous pouvez le réactiver à tout moment.',
     );
   }
 
@@ -280,7 +289,7 @@ export default function DashboardScreen() {
         activeOpacity={0.85}
         onPress={() => {
           if (currentPlan === 'free') {
-            Alert.alert('Plan Pro requis', 'Passez au plan Pro pour créer des promotions.', [
+            Alert.alert('Plan Essential requis', 'Passez au plan Essential pour créer des promotions.', [
               { text: 'Plus tard', style: 'cancel' },
               { text: 'Découvrir', onPress: () => setPlansModalVisible(true) },
             ]);
@@ -298,7 +307,7 @@ export default function DashboardScreen() {
             {currentPlan === 'free' && (
               <View style={styles.lockBadge}>
                 <Ionicons name="lock-closed" size={10} color={Colors.light.primary} />
-                <Text style={styles.lockBadgeText}>Pro</Text>
+                <Text style={styles.lockBadgeText}>Essential</Text>
               </View>
             )}
           </View>
@@ -311,8 +320,8 @@ export default function DashboardScreen() {
         style={styles.toolCard}
         activeOpacity={0.85}
         onPress={() => {
-          if (currentPlan !== 'premium') {
-            Alert.alert('Plan Premium requis', 'Passez au plan Premium pour booster votre visibilité.', [
+          if (currentPlan !== 'pro') {
+            Alert.alert('Plan Pro requis', 'Passez au plan Pro pour booster votre visibilité.', [
               { text: 'Plus tard', style: 'cancel' },
               { text: 'Découvrir', onPress: () => setPlansModalVisible(true) },
             ]);
@@ -327,10 +336,10 @@ export default function DashboardScreen() {
         <View style={styles.toolBody}>
           <View style={styles.toolTitleRow}>
             <Text style={styles.toolTitle}>Mettre en avant</Text>
-            {currentPlan !== 'premium' && (
+            {currentPlan !== 'pro' && (
               <View style={styles.lockBadge}>
                 <Ionicons name="lock-closed" size={10} color={Colors.light.primary} />
-                <Text style={styles.lockBadgeText}>Premium</Text>
+                <Text style={styles.lockBadgeText}>Pro</Text>
               </View>
             )}
           </View>
@@ -345,7 +354,7 @@ export default function DashboardScreen() {
         activeOpacity={0.85}
         onPress={() => {
           if (currentPlan === 'free') {
-            Alert.alert('Plan Pro requis', 'Passez au plan Pro pour publier des évènements.', [
+            Alert.alert('Plan Essential requis', 'Passez au plan Essential pour publier des évènements.', [
               { text: 'Plus tard', style: 'cancel' },
               { text: 'Découvrir', onPress: () => setPlansModalVisible(true) },
             ]);
@@ -363,7 +372,7 @@ export default function DashboardScreen() {
             {currentPlan === 'free' && (
               <View style={styles.lockBadge}>
                 <Ionicons name="lock-closed" size={10} color={Colors.light.primary} />
-                <Text style={styles.lockBadgeText}>Pro</Text>
+                <Text style={styles.lockBadgeText}>Essential</Text>
               </View>
             )}
           </View>
@@ -379,14 +388,14 @@ export default function DashboardScreen() {
           <Ionicons name="bar-chart" size={24} color={Colors.light.primary} />
         </View>
         <Text style={styles.analyticsTitle}>
-          {currentPlan === 'premium' ? 'Analytics avancées disponibles' : 'Statistiques détaillées disponibles avec Pro'}
+          {currentPlan === 'pro' ? 'Analytics avancées disponibles' : 'Statistiques détaillées disponibles avec Pro'}
         </Text>
         <Text style={styles.analyticsDesc}>
-          {currentPlan === 'premium'
+          {currentPlan === 'pro'
             ? 'Consultez vos analytics avancées : conversion, ROI, heatmaps.'
             : "Vues, clics, conversions. Visualisez l'impact de votre fiche."}
         </Text>
-        {currentPlan !== 'premium' && (
+        {currentPlan !== 'pro' && (
           <TouchableOpacity
             style={styles.discoverPremiumBtn}
             activeOpacity={0.85}
@@ -491,9 +500,9 @@ export default function DashboardScreen() {
 
       <WelcomeOfferModal
         visible={welcomeVisible}
-        onClose={() => setWelcomeVisible(false)}
+        onClose={dismissWelcome}
         onDiscover={() => {
-          setWelcomeVisible(false);
+          dismissWelcome();
           setPlansModalVisible(true);
         }}
       />

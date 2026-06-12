@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 
-export type PlanId = 'free' | 'pro' | 'premium';
+export type PlanId = 'free' | 'essential' | 'pro';
 
 export interface StatCard {
   label: string;
@@ -40,13 +40,14 @@ export const PLANS: SubscriptionPlan[] = [
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    price: '49 €',
+    id: 'essential',
+    name: 'Essential',
+    price: '39 €',
     period: '/mois',
     tagline: 'Le plus populaire',
     popular: true,
     features: [
+      'Ou 374 €/an (-20 %)',
       'Tout du plan Gratuit',
       'Mise en avant dans les recommandations',
       'Photos illimitées + menu détaillé',
@@ -58,14 +59,15 @@ export const PLANS: SubscriptionPlan[] = [
     ],
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    price: '129 €',
+    id: 'pro',
+    name: 'Pro',
+    price: '99 €',
     period: '/mois',
     tagline: 'Maximisez vos revenus',
     popular: false,
     features: [
-      'Tout du plan Pro',
+      'Ou 950 €/an (-20 %)',
+      'Tout du plan Essential',
       'Promotions et évènements illimités',
       'Analytics avancées (conversion, ROI)',
       'Campagnes marketing ciblées',
