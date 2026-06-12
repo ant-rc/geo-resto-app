@@ -25,7 +25,9 @@ export default function ImageCarousel({
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+  // Update the active index only when the swipe settles — avoids a setState per
+  // frame (60fps re-renders) during the scroll.
+  function handleMomentumEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / screenWidth);
     setActiveIndex(index);
@@ -46,8 +48,7 @@ export default function ImageCarousel({
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        onMomentumScrollEnd={handleMomentumEnd}
       >
         {images.map((uri, index) => (
           <Image

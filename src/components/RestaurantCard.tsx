@@ -36,7 +36,14 @@ function RestaurantCard({
   }
 
   if (variant === 'wide') {
-    return <WideVariant restaurant={restaurant} onPress={handlePress} />;
+    return (
+      <WideVariant
+        restaurant={restaurant}
+        onPress={handlePress}
+        isFavorite={isFavorite}
+        onFavoriteToggle={onFavoriteToggle}
+      />
+    );
   }
 
   return (
@@ -85,8 +92,11 @@ function MiniVariant({
       accessibilityLabel={`Voir ${restaurant.name}`}
     >
       <View style={miniStyles.imageWrap}>
-        {restaurant.image_url ? (
-          <Image source={{ uri: restaurant.image_url }} style={miniStyles.image} />
+        {(restaurant.images?.[0] ?? restaurant.image_url) ? (
+          <Image
+            source={{ uri: restaurant.images?.[0] ?? restaurant.image_url ?? undefined }}
+            style={miniStyles.image}
+          />
         ) : (
           <ImagePlaceholder size={24} />
         )}
@@ -105,7 +115,7 @@ function MiniVariant({
               <Text style={miniStyles.ratingText}>{restaurant.rating.toFixed(1)}</Text>
             </View>
           )}
-          <Text style={miniStyles.price}>{'$'.repeat(restaurant.price_range)}</Text>
+          <Text style={miniStyles.price}>{'€'.repeat(restaurant.price_range)}</Text>
         </View>
       </View>
       {restaurant.distance > 0 && (
@@ -200,7 +210,7 @@ function StandardVariant({
           {restaurant.cuisine_type?.join(' · ')}
         </Text>
         <Text style={stdStyles.price}>
-          {'$'.repeat(restaurant.price_range)}
+          {'€'.repeat(restaurant.price_range)}
         </Text>
         {restaurant.tags?.length > 0 && (
           <View style={stdStyles.tags}>
@@ -219,10 +229,16 @@ function StandardVariant({
 function WideVariant({
   restaurant,
   onPress,
+  isFavorite,
+  onFavoriteToggle,
 }: {
   restaurant: RestaurantWithDistance;
   onPress: () => void;
+  isFavorite?: boolean;
+  onFavoriteToggle?: () => void;
 }) {
+  const imageSource = restaurant.images?.[0] ?? restaurant.image_url;
+
   return (
     <TouchableOpacity
       style={wideStyles.card}
@@ -233,14 +249,35 @@ function WideVariant({
     >
       {/* Hero image */}
       <View style={wideStyles.imageWrap}>
-        {restaurant.image_url ? (
-          <Image source={{ uri: restaurant.image_url }} style={wideStyles.image} />
+        {imageSource ? (
+          <Image source={{ uri: imageSource }} style={wideStyles.image} />
         ) : (
           <ImagePlaceholder size={26} />
         )}
 
         {/* Gradient overlay */}
         <View style={wideStyles.imageGradient} />
+
+        {/* Heart button - top-right */}
+        {onFavoriteToggle && (
+          <TouchableOpacity
+            style={wideStyles.heartBtn}
+            onPress={onFavoriteToggle}
+            accessibilityRole="button"
+            accessibilityState={{ selected: !!isFavorite }}
+            accessibilityLabel={
+              isFavorite
+                ? `Retirer ${restaurant.name} des favoris`
+                : `Ajouter ${restaurant.name} aux favoris`
+            }
+          >
+            <Ionicons
+              name={isFavorite ? 'heart' : 'heart-outline'}
+              size={18}
+              color={isFavorite ? Colors.light.error : Colors.light.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
 
         {/* Rating badge - bottom-left */}
         {restaurant.rating != null && (
@@ -261,7 +298,7 @@ function WideVariant({
         <Text style={wideStyles.metaLine} numberOfLines={1}>
           {[
             restaurant.cuisine_type?.join(', '),
-            '$'.repeat(restaurant.price_range),
+            '€'.repeat(restaurant.price_range),
             restaurant.distance > 0 ? formatDistance(restaurant.distance) : null,
           ]
             .filter(Boolean)
@@ -495,6 +532,17 @@ const wideStyles = StyleSheet.create({
     right: 0,
     height: 60,
     backgroundColor: Colors.light.overlay,
+  },
+  heartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.light.surfaceGlass,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ratingOverlay: {
     position: 'absolute',

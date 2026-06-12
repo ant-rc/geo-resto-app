@@ -31,10 +31,8 @@ export default function DetailMapSection({ restaurant }: DetailMapSectionProps) 
 
 const styles = StyleSheet.create({
   container: {
-    height: 170,
+    height: '100%',
     backgroundColor: Colors.light.primaryLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
   },
   content: {
     flex: 1,
