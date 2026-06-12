@@ -29,12 +29,17 @@ export async function getRestaurantsNear(
 
   if (!places || places.length === 0) return MOCK_RESTAURANTS;
 
-  return places.map(mapGooglePlaceToRestaurant);
+  return places
+    .map(mapGooglePlaceToRestaurant)
+    .filter((r): r is Restaurant => r !== null);
 }
 
 export async function getRestaurantById(id: string): Promise<Restaurant | null> {
   const cached = await getCachedPlaceById(id);
-  if (cached) return mapGooglePlaceToRestaurant(cached);
+  if (cached) {
+    const mapped = mapGooglePlaceToRestaurant(cached);
+    if (mapped) return mapped;
+  }
 
   const mock = MOCK_RESTAURANTS.find((r) => r.id === id);
   return mock ?? null;

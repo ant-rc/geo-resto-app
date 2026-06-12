@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -67,6 +67,20 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     }, [fetchFavorites])
   );
 
+  // Reset on sign-out / refetch on sign-in so favorites never leak across users.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setFavorites([]);
+        setFavoriteIds(new Set());
+        pendingToggles.current.clear();
+      } else if (event === 'SIGNED_IN') {
+        fetchFavorites();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [fetchFavorites]);
+
   const toggleFavorite = useCallback(async (restaurantId: string) => {
     // Prevent inconsistent state from rapid double-taps on the same restaurant.
     if (pendingToggles.current.has(restaurantId)) {
@@ -98,11 +112,17 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       const isFav = favoriteIds.has(restaurantId);
 
       if (isFav) {
-        await supabase
+        const { error } = await supabase
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
           .eq('restaurant_id', restaurantId);
+
+        // Only mutate local state once the server confirms — avoids UI/DB desync.
+        if (error) {
+          Alert.alert('Erreur', 'Impossible de retirer ce favori. Réessayez.');
+          return;
+        }
 
         setFavorites((prev) => prev.filter((f) => f.restaurant.id !== restaurantId));
         setFavoriteIds((prev) => {
@@ -111,11 +131,16 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
           return next;
         });
       } else {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('favorites')
           .insert({ user_id: user.id, restaurant_id: restaurantId } as never)
           .select('id, restaurant_id, restaurant:restaurants (*)')
           .single();
+
+        if (error) {
+          Alert.alert('Erreur', "Impossible d'ajouter ce favori. Réessayez.");
+          return;
+        }
 
         const fav = mapFavoriteRow(data);
         if (fav) {

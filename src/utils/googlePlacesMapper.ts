@@ -52,6 +52,54 @@ const TYPE_TO_CUISINE: Record<string, string> = {
   bistro: 'Bistrot',
 };
 
+// Ambiance/feature tags only — never dietary or allergen claims (see deriveTags).
+const AMBIANCE_TAGS = ['terrasse', 'romantique', 'famille', 'fast', 'livraison', 'brunch'];
+
+function stableHash(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Google Places does not expose dietary attributes. We never fabricate dietary
+ * or allergen tags (vegan/halal/sans gluten/bio) from a hash — that would be
+ * false and unsafe. Dietary tags are added ONLY when the place type explicitly
+ * signals them; the remaining slots are filled with low-stakes ambiance tags.
+ * In production these are declared by the owner or parsed from the menu.
+ */
+function deriveTags(place: GooglePlace): string[] {
+  const types = [place.primaryType, ...(place.types ?? [])].filter(
+    (t): t is string => Boolean(t),
+  );
+  const tags = new Set<string>();
+
+  // Dietary tag only on an explicit type signal.
+  if (types.some((t) => t === 'vegan_restaurant' || t === 'vegetarian_restaurant')) {
+    tags.add('vegan');
+  }
+  if (types.some((t) => ['cafe', 'coffee_shop', 'bakery', 'brunch_restaurant', 'breakfast_restaurant'].includes(t))) {
+    tags.add('brunch');
+  }
+  if (types.some((t) => ['fast_food_restaurant', 'meal_takeaway', 'meal_delivery', 'hamburger_restaurant', 'sandwich_shop'].includes(t))) {
+    tags.add('fast');
+    tags.add('livraison');
+  }
+
+  // Fill up to three with stable ambiance tags (never dietary/allergen).
+  const hash = stableHash(place.id);
+  const offset = hash % AMBIANCE_TAGS.length;
+  const rotated = [...AMBIANCE_TAGS.slice(offset), ...AMBIANCE_TAGS.slice(0, offset)];
+  for (const tag of rotated) {
+    if (tags.size >= 3) break;
+    tags.add(tag);
+  }
+
+  return Array.from(tags);
+}
+
 function extractCuisines(place: GooglePlace): string[] {
   const types = [place.primaryType, ...(place.types ?? [])].filter(
     (t): t is string => Boolean(t),
@@ -69,7 +117,10 @@ function extractCuisines(place: GooglePlace): string[] {
   return Array.from(cuisines);
 }
 
-export function mapGooglePlaceToRestaurant(place: GooglePlace): Restaurant {
+export function mapGooglePlaceToRestaurant(place: GooglePlace): Restaurant | null {
+  // Google may omit location; a restaurant without coordinates can't be placed.
+  if (!place.location) return null;
+
   const photos = (place.photos ?? [])
     .slice(0, 5)
     .map((p) => buildPhotoUrl(p.name, 800));
@@ -92,7 +143,7 @@ export function mapGooglePlaceToRestaurant(place: GooglePlace): Restaurant {
       : null,
     image_url: photos[0] ?? null,
     images: photos,
-    tags: [],
+    tags: deriveTags(place),
     rating: place.rating ?? null,
     created_at: now,
     updated_at: now,

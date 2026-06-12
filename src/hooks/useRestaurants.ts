@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Coordinates, Restaurant, RestaurantWithDistance } from '@/types/database';
 import { enrichWithDistance } from '@/utils/distance';
 import { getRestaurantsNear } from '@/lib/restaurantsService';
@@ -6,6 +6,7 @@ import { getRestaurantsNear } from '@/lib/restaurantsService';
 export interface RestaurantFilters {
   searchQuery?: string;
   cuisineType?: string | null;
+  cuisineTypes?: string[];
   priceRange?: [number, number];
   tags?: string[];
   maxDistance?: number;
@@ -42,6 +43,12 @@ function applyClientFilters(
     );
   }
 
+  if (filters.cuisineTypes && filters.cuisineTypes.length > 0) {
+    filtered = filtered.filter((r) =>
+      filters.cuisineTypes!.some((c) => r.cuisine_type.includes(c))
+    );
+  }
+
   if (filters.tags && filters.tags.length > 0) {
     filtered = filtered.filter((r) =>
       filters.tags!.some((tag) => r.tags.includes(tag))
@@ -59,42 +66,54 @@ export function useRestaurants(filters: RestaurantFilters = {}): UseRestaurantsR
   const [restaurants, setRestaurants] = useState<RestaurantWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const reqIdRef = useRef(0);
+
   const fetchRestaurants = useCallback(async () => {
+    const reqId = ++reqIdRef.current;
     setLoading(true);
 
-    const raw = await getRestaurantsNear(filters.userLocation ?? null);
-    const source = applyClientFilters(raw, filters);
+    try {
+      const raw = await getRestaurantsNear(filters.userLocation ?? null);
+      // Drop stale responses: a newer filter/search request superseded this one.
+      if (reqId !== reqIdRef.current) return;
 
-    let results: RestaurantWithDistance[];
+      const source = applyClientFilters(raw, filters);
 
-    if (filters.userLocation) {
-      results = enrichWithDistance(source, filters.userLocation);
-    } else {
-      results = source.map((r) => ({ ...r, distance: 0 }));
+      let results: RestaurantWithDistance[];
+
+      if (filters.userLocation) {
+        results = enrichWithDistance(source, filters.userLocation);
+      } else {
+        results = source.map((r) => ({ ...r, distance: 0 }));
+      }
+
+      if (filters.maxDistance && filters.userLocation) {
+        results = results.filter((r) => r.distance <= filters.maxDistance!);
+      }
+
+      if (filters.priceRange) {
+        const [min, max] = filters.priceRange;
+        results = results.filter(
+          (r) => r.price_range >= min && r.price_range <= max
+        );
+      }
+
+      if (filters.sortBy === 'rating') {
+        results.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      } else if (filters.sortBy === 'price') {
+        results.sort((a, b) => a.price_range - b.price_range);
+      }
+
+      setRestaurants(results);
+    } catch (_error) {
+      if (reqId === reqIdRef.current) setRestaurants([]);
+    } finally {
+      if (reqId === reqIdRef.current) setLoading(false);
     }
-
-    if (filters.maxDistance && filters.userLocation) {
-      results = results.filter((r) => r.distance <= filters.maxDistance!);
-    }
-
-    if (filters.priceRange) {
-      const [min, max] = filters.priceRange;
-      results = results.filter(
-        (r) => r.price_range >= min && r.price_range <= max
-      );
-    }
-
-    if (filters.sortBy === 'rating') {
-      results.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    } else if (filters.sortBy === 'price') {
-      results.sort((a, b) => a.price_range - b.price_range);
-    }
-
-    setRestaurants(results);
-    setLoading(false);
   }, [
     filters.searchQuery,
     filters.cuisineType,
+    filters.cuisineTypes,
     filters.tags,
     filters.maxDistance,
     filters.minRating,

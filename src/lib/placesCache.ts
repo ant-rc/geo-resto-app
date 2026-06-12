@@ -31,6 +31,32 @@ export async function getCachedPlaces(
   }
 }
 
+async function purgeExpired(): Promise<void> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const cacheKeys = keys.filter((k) => k.startsWith(CACHE_PREFIX));
+    if (cacheKeys.length === 0) return;
+
+    const entries = await AsyncStorage.multiGet(cacheKeys);
+    const expired: string[] = [];
+    for (const [key, raw] of entries) {
+      if (!raw) {
+        expired.push(key);
+        continue;
+      }
+      try {
+        const entry = JSON.parse(raw) as CacheEntry;
+        if (Date.now() - entry.timestamp > TTL_MS) expired.push(key);
+      } catch {
+        expired.push(key);
+      }
+    }
+    if (expired.length > 0) await AsyncStorage.multiRemove(expired);
+  } catch {
+    // best-effort cleanup
+  }
+}
+
 export async function setCachedPlaces(
   latitude: number,
   longitude: number,
@@ -43,6 +69,8 @@ export async function setCachedPlaces(
       buildKey(latitude, longitude, radius),
       JSON.stringify(entry),
     );
+    // Fire-and-forget: drop stale entries so AsyncStorage doesn't grow unbounded.
+    void purgeExpired();
   } catch {
     // Cache write failure is non-fatal
   }

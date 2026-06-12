@@ -27,7 +27,8 @@ function calculateDistanceScore(
   distance: number,
   maxDistance: number
 ): number {
-  return Math.max(0, (1 - distance / maxDistance)) * 100;
+  const safeMax = maxDistance > 0 ? maxDistance : 1;
+  return Math.max(0, (1 - distance / safeMax)) * 100;
 }
 
 function calculatePriceScore(

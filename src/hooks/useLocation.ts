@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Location from 'expo-location';
 import { Coordinates } from '@/types/database';
 
@@ -18,6 +18,11 @@ export function useLocation(): UseLocationResult {
   const [location, setLocation] = useState<Coordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const fetchLocation = useCallback(async () => {
     setLoading(true);
@@ -25,6 +30,7 @@ export function useLocation(): UseLocationResult {
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      if (!mountedRef.current) return;
       if (status !== 'granted') {
         setError('Permission de localisation refusée');
         setLocation(DEFAULT_LOCATION);
@@ -32,15 +38,17 @@ export function useLocation(): UseLocationResult {
       }
 
       const loc = await Location.getCurrentPositionAsync({});
+      if (!mountedRef.current) return;
       setLocation({
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
       });
     } catch (_error) {
+      if (!mountedRef.current) return;
       setError('Position indisponible');
       setLocation(DEFAULT_LOCATION);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
